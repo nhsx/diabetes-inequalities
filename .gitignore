@@ -1,7 +1,7 @@
 # Ignore everything
 *
 # Except
-LICENSE
+!LICENSE
 !.gitignore
 !*.md
 !*.py
