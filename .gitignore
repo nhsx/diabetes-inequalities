@@ -1,0 +1,11 @@
+# Ignore everything
+*
+# Except
+LICENSE
+!.gitignore
+!*.md
+!*.py
+!*.sh
+
+# ...even if they are in subdirectories
+!*/
