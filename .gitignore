@@ -9,3 +9,5 @@
 
 # ...even if they are in subdirectories
 !*/
+
+.ipynb_checkpoints
