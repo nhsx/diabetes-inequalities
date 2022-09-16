@@ -25,10 +25,31 @@ from sklearn.linear_model import LinearRegression
 ```
 
 ```python
-outpatient = pd.read_pickle('../4.processOP/data/OPattendance.pkl')
+outpatient = pd.read_pickle('../4.processOP/data/OPattendance.pkl').rename({'Gender': 'Sex'}, axis=1)
+outpatient['Date'] = outpatient['appointmentDateTime'].apply(lambda x: x.date()).astype('datetime64[ns]')
+
 inpatient = pd.read_pickle('../4.processIP/data/IPadmissions.pkl')
-emergency = pd.read_pickle('../4.processAandE/data/AandEattendance.pkl')
+inpatient['Date'] = inpatient['spellAdmissionDate'].apply(lambda x: x.date()).astype('datetime64[ns]')
+inpatient['spellDischargeDate'] = inpatient['spellDischargeDate'].apply(lambda x: x.date()).astype('datetime64[ns]')
+
+emergency = pd.read_pickle('../4.processAandE/data/AandEattendance.pkl').rename({'Gender': 'Sex'}, axis=1)
+emergency['Date'] = emergency['arrivalDateTime'].apply(lambda x: x.date()).astype('datetime64[ns]')
+
 primary = pd.read_pickle('../5.processPrimary/data/primaryProcessed-raw.pkl')
+primary['CodeEventDate'] = primary['CodeEventDate'].astype('datetime64[ns]')
+```
+
+```python
+cols = ['patientID', 'Age', 'Sex', 'Ethnicity', 'IMD (quintile)', 'Date']
+identifiers = (
+    pd.concat([inpatient[cols], emergency[cols], outpatient[cols]])
+    .drop_duplicates()
+    .sort_values('Date', ascending=False)
+    .groupby('patientID')
+    .head(1)
+    .set_index('patientID')
+    .drop('Date', axis=1)
+)
 ```
 
 ```python
@@ -113,8 +134,8 @@ timeExpand = np.timedelta64(2, 'D')
 
 ```python
 outpatientSummary = outpatient.copy()
-outpatientSummary['Start'] = outpatientSummary['appointmentDateTime'] - timeExpand
-outpatientSummary['End'] = outpatientSummary['appointmentDateTime'] + timeExpand
+outpatientSummary['Start'] = outpatientSummary['Date'] - timeExpand
+outpatientSummary['End'] = outpatientSummary['Date'] + timeExpand
 outpatientSummary['Event'] = 'Outpatient'
 outpatientSummary['Referral Period'] = 'N/A'
 outpatientSummary['Info'] = outpatientSummary['specialityName']
@@ -125,8 +146,8 @@ outpatientSummary['Value'] = 0
 
 ```python
 emergencySummary = emergency.copy()
-emergencySummary['Start'] = emergencySummary['arrivalDateTime'] - timeExpand
-emergencySummary['End'] = emergencySummary['arrivalDateTime'] + timeExpand
+emergencySummary['Start'] = emergencySummary['Date'] - timeExpand
+emergencySummary['End'] = emergencySummary['Date'] + timeExpand
 emergencySummary['Event'] = 'A&E'
 emergencySummary['Referral Period'] = 'N/A'
 emergencySummary['Info'] = emergencySummary['presentingComplaint']
@@ -136,8 +157,8 @@ emergencySummary['Value'] = 0
 ```
 
 ```python
-cols = ['spellAdmissionDate', 'spellDischargeDate', 'patientID', 'admissionMethod']
-names = {'spellAdmissionDate': 'Start', 'spellDischargeDate': 'End', 'admissionMethod': 'Info'}
+cols = ['Date', 'spellDischargeDate', 'patientID', 'admissionMethod']
+names = {'Date': 'Start', 'spellDischargeDate': 'End', 'admissionMethod': 'Info'}
 inpatientSummary = inpatient[cols].rename(names, axis=1).copy()
 inpatientSummary['Event'] = 'Admission'
 inpatientSummary['Referral Period'] = 'N/A'
@@ -197,7 +218,7 @@ names = ({
     'Type II diabetes mellitus': 'Type 2 Diabetes',
     'Haemoglobin concentration': 'Hemoglobin',
     'Type I diabetes mellitus': 'Type 1 Diabetes',
-    'GFR calculated Cockcroft-Gault formula': 'GFR'
+    'GFR calculated Cockcroft-Gault formula': 'GFR-Cockcroft'
 })
 primarySummary['Event'] = primarySummary['Event'].replace(names)
 ```
@@ -295,4 +316,51 @@ A = (
     .pivot(index='patientID', columns='feature')
     .droplevel(0, axis=1)
 )
+```
+
+```python
+B = pd.merge(A, identifiers, left_index=True, right_index=True, how='left')
+```
+
+```python
+B.loc[B['recordSpan'] > (365.25 / 2)].groupby('Ethnicity')['HbA1c (IFCC)-coef'].agg(['mean', 'median', 'size'])
+```
+
+```python
+B.loc[B['recordSpan'] > (365.25 / 2)].groupby('IMD (quintile)')['HbA1c (IFCC)-coef'].agg(['mean', 'median', 'size'])
+```
+
+```python
+appoint = B[list(names.values())].div(B['recordSpan'] + 1, axis=0)
+sns.clustermap(appoint.dropna())
+```
+
+```python
+B['Admission'] = B['AdmissionTime'] > 0
+B['HbA1C-Improved'] = B['HbA1c (IFCC)-coef'] < 0
+```
+
+```python
+pd.crosstab(B['Admission'], B['HbA1C-Improved'])
+```
+
+```python
+minMeasure = 5
+sub = B.loc[B['HbA1c (IFCC)-coef'] > minMeasure]
+```
+
+```python
+sns.scatterplot(data=sub, y='AdmissionTime', x='HbA1c (IFCC)-coef')
+```
+
+```python
+sns.scatterplot(data=sub, x='meanWait', y='HbA1c (IFCC)-coef', alpha=0.5)
+```
+
+```python
+sns.scatterplot(data=sub, x='meanWait', y='AdmissionTime', alpha=0.5)
+```
+
+```python
+
 ```
