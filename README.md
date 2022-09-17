@@ -19,6 +19,17 @@ pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
 
 ## Workflow
 
+### Initialise Logger
+The logging level of `esneft_tools` can be set via the `setVerbosity()` function.
+
+```python
+import logging
+from esneft_tools.utils import setVerbosity
+
+setVerbosity(logging.INFO)
+```
+
+
 ### Retrieve Data
 Each of the `esneft_tools.download.get*()` functions retrieve a static copy of a particular data set from GitHub.
 A local copy of these tables is saved to `{dir}/.esneft_cache/`.

@@ -7,12 +7,9 @@
 import os
 import logging
 import pandas as pd
+from esneft_tools.utils import _createCache
 
-
-def _createCache(dir: str = '.'):
-    path = f'{dir}/.esneft-cache'
-    os.makedirs(path, exist_ok=True)
-    return path
+logger = logging.getLogger(__name__)
 
 
 def _url():
@@ -25,7 +22,7 @@ def getLookup(dir: str = '.') -> pd.Series:
     dir = _createCache(dir)
     out = f'{dir}/postcode-lsoa-lookup.csv'
     if os.path.exists(out):
-        logging.info(f'Lookup exists - loading from {out}.')
+        logger.info(f'Lookup exists - loading from {out}.')
         pcd_lsoa = pd.read_csv(out)
     else:
         pcd_lsoa = (pd.read_json(f'{_url()}/postcode-lsoa.json', orient='index')
@@ -39,7 +36,7 @@ def getIMD(dir: str = '.') -> pd.DataFrame:
     dir = _createCache(dir)
     out = f'{dir}/imd-statistics.csv'
     if os.path.exists(out):
-        logging.info(f'Lookup exists - loading from {out}.')
+        logger.info(f'Lookup exists - loading from {out}.')
         imd = pd.read_csv(out)
     else:
         imd = pd.read_csv(f'{_url()}/imd-statistics.csv')
@@ -53,7 +50,7 @@ def getPopulation(dir: str = '.') -> tuple[pd.DataFrame, pd.DataFrame]:
     for file in ['population-groups', 'population-medianAge']:
         out = f'{dir}/{file}.csv'
         if os.path.exists(out):
-            logging.info(f'Lookup exists - loading from {out}.')
+            logger.info(f'Lookup exists - loading from {out}.')
             pop = pd.read_csv(out)
         else:
             pop = pd.read_csv(f'{_url()}/{file}.csv')
