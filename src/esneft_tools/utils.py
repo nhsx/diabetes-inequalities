@@ -6,12 +6,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def _createCache(dir: str = '.'):
-    path = f'{dir}/.esneft-cache'
-    logger.info(f'Caching files to {path}')
-    os.makedirs(path, exist_ok=True)
-    return path
-
 
 def setVerbosity(
         level=logging.INFO, handler=logging.StreamHandler(),
