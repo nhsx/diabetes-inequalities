@@ -48,7 +48,7 @@ dataDownloader = getData()
 lsoaNameMap, postcodeLSOAmap = dataDownloader.fromHost('LSOA')
 
 # Full list of Multiple Deprivation Indices
-imd = dataDownloader.fromHost('IMD')
+imd, = dataDownloader.fromHost('IMD')
 
 # Population estimates by LSOA level
 popSummary, popMedian = dataDownloader.fromHost('Population')

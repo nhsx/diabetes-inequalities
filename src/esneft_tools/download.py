@@ -21,13 +21,13 @@ class getData():
             'LSOA': ['lsoa-name.json', 'postcode-lsoa.json'],
             'IMD': ['imd-statistics.json']
         })
-        self.hashes = {}
+        self.observedHashes = {}
         os.makedirs(self.cache , exist_ok=True)
         logger.info(f'Retrieved files will be cached to {self.cache}')
 
 
     def fromHost(self, name: str):
-        allData = []
+        allData = {}
         for filename in self.options[name]:
             out = f'{self.cache}/{filename}'
             if os.path.exists(out):
@@ -47,18 +47,27 @@ class getData():
 
     def _getSourcePath(self, name: str):
         paths = []
-        for path in self.options['name']:
+        for path in self.options[name]:
             paths.append(f'{self.cache}/{path}')
         return tuple(paths)
 
 
-    def _checkHash(self, paths: list):
-        sha256_hash = hashlib.sha256()
-        for path in paths:
-            with open(filename, 'rb') as f:
-                for byte_block in iter(lambda: f.read(4096), 'b'):
-                    sha256_hash.update(byte_block)
-            self.hashes[path] = sha256_hash
+    def _checkHash(self, path: str, readSize: int = 4096):
+        sha256Hash = hashlib.sha256()
+        with open(path, 'rb') as f:
+            data = f.read(readSize)
+            while data:
+                sha256Hash.update(data)
+                data = f.read(readSize)
+        return sha256Hash.hexdigest()
+
+
+    def _expectedHashes(self):
+        return ({
+            'lsoa-name.json': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
+            'postcode-lsoa.json': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
+            'imd-statistics.json': '82f654e30cb4691c7495779f52806391519267d68e8427e31ccdd90fb3901216'
+        })
 
 
     def fromSource(self, name: str):
@@ -69,7 +78,8 @@ class getData():
         })
         paths = self._getSourcePath(name)
         data = sourceMap[name]()
-        self._checkHash(paths)
+        for path in paths:
+            self.observedHashes[path] = self._checkHash(path)
         return data
 
 
@@ -139,7 +149,7 @@ class getData():
             0, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31,
             34, 37, 40, 43, 46, 49, 52, 53, 54, 55, 56
         ])
-        path = self._getSourcePath('IMD')
+        path, = self._getSourcePath('IMD')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/{name}')
             data = pd.read_csv(
@@ -147,18 +157,6 @@ class getData():
                 dtype=dtype, skiprows=1, sep=',').set_index('LSOA11CD')
             data.to_json(path)
         return data
-
-
-def getIMD(dir: str = '.') -> pd.DataFrame:
-    dir = _createCache(dir)
-    out = f'{dir}/imd-statistics.csv'
-    if os.path.exists(out):
-        logger.info(f'Lookup exists - loading from {out}.')
-        imd = pd.read_csv(out)
-    else:
-        imd = pd.read_csv(f'{_url()}/imd-statistics.json')
-        imd.to_csv(out, index=False)
-    return imd
 
 
 def getPopulation(dir: str = '.') -> tuple[pd.DataFrame, pd.DataFrame]:
