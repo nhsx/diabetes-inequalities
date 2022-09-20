@@ -26,6 +26,15 @@ class getData():
         logger.info(f'Retrieved files will be cached to {self.cache}')
 
 
+    @property
+    def expectedHashes(self):
+        return ({
+            'lsoa-name.json': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
+            'postcode-lsoa.json': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
+            'imd-statistics.json': '82f654e30cb4691c7495779f52806391519267d68e8427e31ccdd90fb3901216'
+        })
+
+
     def fromHost(self, name: str):
         allData = {}
         for filename in self.options[name]:
@@ -45,6 +54,19 @@ class getData():
         return tuple(allData)
 
 
+    def fromSource(self, name: str):
+        """ Call function according to input """
+        sourceMap = ({
+            'LSOA': self._sourceLSOA,
+            'IMD': self._sourceIMD
+        })
+        paths = self._getSourcePath(name)
+        data = sourceMap[name]()
+        for path in paths:
+            self.observedHashes[path] = self._checkHash(path)
+        return data
+
+
     def _getSourcePath(self, name: str):
         paths = []
         for path in self.options[name]:
@@ -60,27 +82,6 @@ class getData():
                 sha256Hash.update(data)
                 data = f.read(readSize)
         return sha256Hash.hexdigest()
-
-
-    def _expectedHashes(self):
-        return ({
-            'lsoa-name.json': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
-            'postcode-lsoa.json': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
-            'imd-statistics.json': '82f654e30cb4691c7495779f52806391519267d68e8427e31ccdd90fb3901216'
-        })
-
-
-    def fromSource(self, name: str):
-        """ Call function according to input """
-        sourceMap = ({
-            'LSOA': self._sourceLSOA,
-            'IMD': self._sourceIMD
-        })
-        paths = self._getSourcePath(name)
-        data = sourceMap[name]()
-        for path in paths:
-            self.observedHashes[path] = self._checkHash(path)
-        return data
 
 
     def _sourceLSOA(self):
