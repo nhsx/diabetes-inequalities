@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 
-""" Retrieve copy of LSOA -> Postcode mappings """
-
-# Source: https://www.arcgis.com/sharing/rest/content/items/6a46e14a6c2441e3ab08c7b277335558/data
-
 import os
+import hashlib
 import zipfile
 import logging
 import tempfile
@@ -14,20 +11,22 @@ import urllib.request
 logger = logging.getLogger(__name__)
 
 
-class Data():
+class getData():
 
     def __init__(self, cache: str = './.data-cache'):
         self.cache = cache
         self.host = ('https://raw.githubusercontent.com/'
                      'StephenRicher/nhsx-internship/main/data/')
         self.options = ({
-            'LSOA': ['lsoa-name.json', 'postcode-lsoa.json']
+            'LSOA': ['lsoa-name.json', 'postcode-lsoa.json'],
+            'IMD': ['imd-statistics.json']
         })
+        self.hashes = {}
         os.makedirs(self.cache , exist_ok=True)
         logger.info(f'Retrieved files will be cached to {self.cache}')
 
 
-    def getData(self, name):
+    def fromHost(self, name: str):
         allData = []
         for filename in self.options[name]:
             out = f'{self.cache}/{filename}'
@@ -46,11 +45,31 @@ class Data():
         return tuple(allData)
 
 
-    def sourceData(self, name):
-        if name == 'LSOA':
-            data = self._sourceLSOA()
-        elif name == 'IMD':
-            data = self._sourceIMD()
+    def _getSourcePath(self, name: str):
+        paths = []
+        for path in self.options['name']:
+            paths.append(f'{self.cache}/{path}')
+        return tuple(paths)
+
+
+    def _checkHash(self, paths: list):
+        sha256_hash = hashlib.sha256()
+        for path in paths:
+            with open(filename, 'rb') as f:
+                for byte_block in iter(lambda: f.read(4096), 'b'):
+                    sha256_hash.update(byte_block)
+            self.hashes[path] = sha256_hash
+
+
+    def fromSource(self, name: str):
+        """ Call function according to input """
+        sourceMap = ({
+            'LSOA': self._sourceLSOA,
+            'IMD': self._sourceIMD
+        })
+        paths = self._getSourcePath(name)
+        data = sourceMap[name]()
+        self._checkHash(paths)
         return data
 
 
@@ -74,17 +93,15 @@ class Data():
                 f'{tmp}/{name}', usecols=cols, names=dtype.keys(), dtype=dtype,
                 skiprows=1, sep=',', encoding='latin-1')
 
-            path = f'{self.cache}/{self.options['LSOA'][0]}'
-            logger.info(f'Writing LSOA Code: Name map to {path}')
+            paths = self._getSourcePath('LSOA')
+            logger.info(f'Writing LSOA Code: Name map to {paths[0]}')
             lsoaNameMap = (lookup.set_index('LSOA11CD')['LSOA11NM']
                            .drop_duplicates())
-            lsoaNameMap.to_json(path)
+            lsoaNameMap.to_json(paths[0])
 
-            path = f'{self.cache}/{self.options['LSOA'][1]}'
-            logger.info(f'Writing Postcode: LSOA map to {path}')
+            logger.info(f'Writing Postcode: LSOA map to {paths[1]}')
             postcodeLSOAmap = lookup.set_index('PCDS')['LSOA11CD']
-            postcodeLSOAmap.to_json(path)
-
+            postcodeLSOAmap.to_json(paths[1])
         return lsoaNameMap, postcodeLSOAmap
 
 
@@ -122,12 +139,13 @@ class Data():
             0, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31,
             34, 37, 40, 43, 46, 49, 52, 53, 54, 55, 56
         ])
+        path = self._getSourcePath('IMD')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/{name}')
             data = pd.read_csv(
                 f'{tmp}/{name}', usecols=cols, names=dtype.keys(),
                 dtype=dtype, skiprows=1, sep=',').set_index('LSOA11CD')
-            data.to_json(f'{self.cache}/{name}')
+            data.to_json(path)
         return data
 
 

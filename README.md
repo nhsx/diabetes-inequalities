@@ -29,29 +29,29 @@ from esneft_tools.utils import setVerbosity
 setVerbosity(logging.INFO)
 ```
 
+### Retrieve Data from Host
+Each of the `esneft_tools.download.getData().fromHost()` functions retrieve a static copy of a particular data set from GitHub.
+A local copy of these tables is saved to `./.esneft_cache/` by default.
 
-### Retrieve Data
-Each of the `esneft_tools.download.get*()` functions retrieve a static copy of a particular data set from GitHub.
-A local copy of these tables is saved to `{dir}/.esneft_cache/`.
-By default `dir` is set to `./` (the current directory) but this can be modified through the function arguments.
-
-  *  `getLookup()`
+  *  `LSOA`
      * Postcode -> LSOA (2011) Lookup Table from [ArcGIS](https://hub.arcgis.com/datasets/6a46e14a6c2441e3ab08c7b277335558/about)
-  *  `getDeprivation()`
+  *  `IMD`
      * Indices of Multiple Deprivation by LSOA in England from [National Statistics (.gov.uk)](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv/preview)
-  * `getPopulation()`
+  *  `Population`
     * LSOA population estimates, by age and sex, from [ONS](https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates)
 
 ```python
-from esneft_tools.download import getLookup, getIMD
+from esneft_tools.download import getData
 
-lookup = getLookup()
+dataDownloader = getData()
+
+lsoaNameMap, postcodeLSOAmap = dataDownloader.fromHost('LSOA')
 
 # Full list of Multiple Deprivation Indices
-imd = getIMD()
+imd = dataDownloader.fromHost('IMD')
 
 # Population estimates by LSOA level
-popSummary, popMedian = getPopulation()
+popSummary, popMedian = dataDownloader.fromHost('Population')
 ```
 
 
