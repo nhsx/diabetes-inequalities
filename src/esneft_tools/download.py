@@ -23,7 +23,7 @@ class getData():
         self.options = ({
             'LSOA': ['lsoa-name.json', 'postcode-lsoa.json'],
             'IMD': ['imd-statistics.json'],
-            'Population': ['population-medianAge.json', 'population-groups.json'],
+            'Population': ['population-lsoa.json'],
             'GP': ['gp-registrations.json']
         })
         self.observedHashes = {}
@@ -37,8 +37,7 @@ class getData():
             'lsoa-name.json': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
             'postcode-lsoa.json': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
             'imd-statistics.json': '82f654e30cb4691c7495779f52806391519267d68e8427e31ccdd90fb3901216',
-            'population-medianAge.json': '44077caaa9f972b86d6f7a39cc0c1aa8fe8b468e59c13b58fc4842a68ab893fa',
-            'population-groups.json': '844006ffc2270a5ac05bef0b042820694a69719168462fd9698fcfa1c99ed145',
+            'population-lsoa.json': 'bec0349325a96da48634c6af3ebc8927fc1f79063f0056bebd420aceed13e533',
             'gp-registrations.json': '33c735683147f7597a59823ab116d182a220d906f266f9da75b6f6d1aaa220ca'
         })
 
@@ -189,59 +188,43 @@ class getData():
             'q=0.9,image/avif,image/webp,*/*;q=0.8'
         )]
         logger.info(f'Downloading Population statistics from {url}')
-        paths = self._getSourcePath('Population')
+        path, = self._getSourcePath('Population')
         with tempfile.TemporaryDirectory() as tmp:
             opener = urllib.request.build_opener()
             opener.addheaders = headers
             urllib.request.install_opener(opener)
             urllib.request.urlretrieve(url, f'{tmp}/{name}')
-            pop = pd.concat([
-                self._processPopulationSheet(f'{tmp}/{name}', 'Male'),
-                self._processPopulationSheet(f'{tmp}/{name}', 'Female'),
-            ])
-            pop['Age'] = pd.cut(
-                pop['AgeYr'].astype(float) + 0.001, bins=self._ageBins())
-            pop_median = (
-                pop.groupby('LSOA11CD').apply(self._countPopMedian)
-                .to_frame().rename({0: 'medianAge'}, axis=1)
+            pop = self._processPopulationSheet(f'{tmp}/{name}')
+            pop_summary = (
+                pop.groupby('LSOA11CD')
+                .apply(self._summarisePopulation)
+                .rename({0: 'medianAge', 1: 'Population'}, axis=1)
             )
-            pop_median.to_json(paths[0])
-
-            pop_agsx = (
-                pop.groupby(['LSOA11CD', 'Sex', 'Age'])['Population']
-                .sum().reset_index().set_index(['LSOA11CD', 'Sex', 'Age'])
-            )
-            pop_agsx.to_json(paths[1])
-        return pop_median, pop_agsx
+            pop_summary.to_json(path)
+        return pop_summary
 
 
-    def _processPopulationSheet(self, path: str, sex: str):
-        pop = pd.read_excel(
-            path, sheet_name=f'Mid-2020 {sex}s', skiprows=4)
+    def _processPopulationSheet(self, path: str):
         dropCols = ([
             'LSOA Name', 'LA Code (2018 boundaries)',
             'LA name (2018 boundaries)', 'LA Code (2021 boundaries)',
             'LA name (2021 boundaries)', 'All Ages'
         ])
-        pop = (pop.rename({'LSOA Code': 'LSOA11CD', '90+': 90}, axis=1)
-              .drop(dropCols, axis=1)
-              .melt(id_vars='LSOA11CD', var_name='AgeYr',
-                    value_name='Population')
+        pop = (pd.read_excel(path, sheet_name='Mid-2020 Persons', skiprows=4)
+                 .rename({'LSOA Code': 'LSOA11CD', '90+': 90}, axis=1)
+                 .drop(dropCols, axis=1)
+                 .melt(id_vars='LSOA11CD', var_name='AgeYr',
+                       value_name='Population')
         )
-        pop['Sex'] = sex
         return pop
 
 
-    def _countPopMedian(self, x):
-        """ Get median value from count table of population"""
+    def _summarisePopulation(self, x):
+        """ Get median Age and total populaiton by LSOA"""
         allAges = []
         for row in x.itertuples():
             allAges.extend([row.AgeYr] * row.Population)
-        return np.median(allAges)
-
-
-    def _ageBins(self):
-        return [0, 3, 6, 14, 19, 34, 49, 65, 79, np.inf]
+        return pd.Series([np.median(allAges), x['Population'].sum()])
 
 
     def _sourceGP(self):
