@@ -5,8 +5,11 @@ import hashlib
 import zipfile
 import logging
 import tempfile
+import numpy as np
 import pandas as pd
 import urllib.request
+from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +22,9 @@ class getData():
                      'StephenRicher/nhsx-internship/main/data/')
         self.options = ({
             'LSOA': ['lsoa-name.json', 'postcode-lsoa.json'],
-            'IMD': ['imd-statistics.json']
+            'IMD': ['imd-statistics.json'],
+            'Population': ['population-medianAge.json', 'population-groups.json'],
+            'GP': ['gp-registrations.json']
         })
         self.observedHashes = {}
         os.makedirs(self.cache , exist_ok=True)
@@ -31,12 +36,15 @@ class getData():
         return ({
             'lsoa-name.json': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
             'postcode-lsoa.json': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
-            'imd-statistics.json': '82f654e30cb4691c7495779f52806391519267d68e8427e31ccdd90fb3901216'
+            'imd-statistics.json': '82f654e30cb4691c7495779f52806391519267d68e8427e31ccdd90fb3901216',
+            'population-medianAge.json': '44077caaa9f972b86d6f7a39cc0c1aa8fe8b468e59c13b58fc4842a68ab893fa',
+            'population-groups.json': '844006ffc2270a5ac05bef0b042820694a69719168462fd9698fcfa1c99ed145',
+            'gp-registrations.json': '33c735683147f7597a59823ab116d182a220d906f266f9da75b6f6d1aaa220ca'
         })
 
 
     def fromHost(self, name: str):
-        allData = {}
+        allData = []
         for filename in self.options[name]:
             out = f'{self.cache}/{filename}'
             if os.path.exists(out):
@@ -47,7 +55,7 @@ class getData():
             try:
                 data = pd.read_json(path)
             except ValueError:
-                data = pd.read_json(path, typ='series')
+                data = pd.read_json(path, typ='series').rename('index')
             if not os.path.exists(out):
                 data.to_json(out)
             allData.append(data)
@@ -58,12 +66,21 @@ class getData():
         """ Call function according to input """
         sourceMap = ({
             'LSOA': self._sourceLSOA,
-            'IMD': self._sourceIMD
+            'IMD': self._sourceIMD,
+            'Population': self._sourcePopulation,
+            'GP': self._sourceGP
         })
         paths = self._getSourcePath(name)
         data = sourceMap[name]()
         for path in paths:
-            self.observedHashes[path] = self._checkHash(path)
+            sourceHash = self._checkHash(path)
+            baseName = Path(path).name
+            self.observedHashes[baseName] = sourceHash
+            logger.info(f'Verifying hash of {baseName} ...')
+            if sourceHash == self.expectedHashes[baseName]:
+                logger.info('... source matches host file.')
+            else:
+                logger.error('... source does NOT match host file.')
         return data
 
 
@@ -160,16 +177,90 @@ class getData():
         return data
 
 
-def getPopulation(dir: str = '.') -> tuple[pd.DataFrame, pd.DataFrame]:
-    dir = _createCache(dir)
-    data = {}
-    for file in ['population-groups', 'population-medianAge']:
-        out = f'{dir}/{file}.csv'
-        if os.path.exists(out):
-            logger.info(f'Lookup exists - loading from {out}.')
-            pop = pd.read_csv(out)
-        else:
-            pop = pd.read_csv(f'{_url()}/{file}.csv')
-            pop.to_csv(out, index=False)
-        data[file] = pop
-    return data['population-groups'], data['population-medianAge']
+    def _sourcePopulation(self):
+        name = 'SAP23DT2-mid2020-LSOA.xlsx'
+        url = ('https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/'
+               'populationandmigration/populationestimates/datasets/'
+               'lowersuperoutputareamidyearpopulationestimates/mid2020sape23dt2/'
+               'sape23dt2mid2020lsoasyoaestimatesunformatted.xlsx')
+        headers = [(
+            'Accept',
+            'text/html,application/xhtml+xml,application/xml;'
+            'q=0.9,image/avif,image/webp,*/*;q=0.8'
+        )]
+        logger.info(f'Downloading Population statistics from {url}')
+        paths = self._getSourcePath('Population')
+        with tempfile.TemporaryDirectory() as tmp:
+            opener = urllib.request.build_opener()
+            opener.addheaders = headers
+            urllib.request.install_opener(opener)
+            urllib.request.urlretrieve(url, f'{tmp}/{name}')
+            pop = pd.concat([
+                self._processPopulationSheet(f'{tmp}/{name}', 'Male'),
+                self._processPopulationSheet(f'{tmp}/{name}', 'Female'),
+            ])
+            pop['Age'] = pd.cut(
+                pop['AgeYr'].astype(float) + 0.001, bins=self._ageBins())
+            pop_median = (
+                pop.groupby('LSOA11CD').apply(self._countPopMedian)
+                .to_frame().rename({0: 'medianAge'}, axis=1)
+            )
+            pop_median.to_json(paths[0])
+
+            pop_agsx = (
+                pop.groupby(['LSOA11CD', 'Sex', 'Age'])['Population']
+                .sum().reset_index().set_index(['LSOA11CD', 'Sex', 'Age'])
+            )
+            pop_agsx.to_json(paths[1])
+        return pop_median, pop_agsx
+
+
+    def _processPopulationSheet(self, path: str, sex: str):
+        pop = pd.read_excel(
+            path, sheet_name=f'Mid-2020 {sex}s', skiprows=4)
+        dropCols = ([
+            'LSOA Name', 'LA Code (2018 boundaries)',
+            'LA name (2018 boundaries)', 'LA Code (2021 boundaries)',
+            'LA name (2021 boundaries)', 'All Ages'
+        ])
+        pop = (pop.rename({'LSOA Code': 'LSOA11CD', '90+': 90}, axis=1)
+              .drop(dropCols, axis=1)
+              .melt(id_vars='LSOA11CD', var_name='AgeYr',
+                    value_name='Population')
+        )
+        pop['Sex'] = sex
+        return pop
+
+
+    def _countPopMedian(self, x):
+        """ Get median value from count table of population"""
+        allAges = []
+        for row in x.itertuples():
+            allAges.extend([row.AgeYr] * row.Population)
+        return np.median(allAges)
+
+
+    def _ageBins(self):
+        return [0, 3, 6, 14, 19, 34, 49, 65, 79, np.inf]
+
+
+    def _sourceGP(self):
+        url = ('https://files.digital.nhs.uk/AD/6A2BD9/'
+               'gp-reg-pat-prac-lsoa-male-female-Jan-21.zip')
+        logger.info(f'Downloading GP lookup from {url}')
+        path, = self._getSourcePath('GP')
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.zip')
+            with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
+                zipRef.extractall(f'{tmp}/')
+            dtype = ({
+                'OrganisationCode': str,
+                'LSOA11CD'        : str,
+                'Patient'         : int,
+            })
+            cols = [2, 4, 6]
+            gp_reg = pd.read_csv(
+                f'{tmp}/gp-reg-pat-prac-lsoa-all.csv', skiprows=1,
+                usecols=cols, dtype=dtype, names=dtype.keys())
+            gp_reg.to_json(path)
+        return gp_reg
