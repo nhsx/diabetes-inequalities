@@ -37,6 +37,7 @@ setup(
         'numpy',
         'pandas',
         'seaborn',
+        'geopandas',
         'matplotlib',
     ],
     license='MIT',

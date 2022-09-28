@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 
 import os
+import json
 import hashlib
 import zipfile
 import logging
 import tempfile
+import pathlib
+import geopandas
 import numpy as np
 import pandas as pd
 import urllib.request
@@ -24,7 +27,10 @@ class getData():
             'LSOA': ['lsoa-name.json', 'postcode-lsoa.json'],
             'IMD': ['imd-statistics.json'],
             'Population': ['population-lsoa.json'],
-            'GP': ['gp-registrations.json']
+            'GP': ['gp-registrations.json'],
+            'ESNEFT-LSOA': ['lsoa-esneft.json'],
+            'LSOA-Map': ['lsoa-map-esneft.geojson']
+
         })
         self.observedHashes = {}
         os.makedirs(self.cache , exist_ok=True)
@@ -38,7 +44,8 @@ class getData():
             'postcode-lsoa.json': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
             'imd-statistics.json': '82f654e30cb4691c7495779f52806391519267d68e8427e31ccdd90fb3901216',
             'population-lsoa.json': 'bec0349325a96da48634c6af3ebc8927fc1f79063f0056bebd420aceed13e533',
-            'gp-registrations.json': '33c735683147f7597a59823ab116d182a220d906f266f9da75b6f6d1aaa220ca'
+            'gp-registrations.json': '33c735683147f7597a59823ab116d182a220d906f266f9da75b6f6d1aaa220ca',
+            'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
         })
 
 
@@ -67,7 +74,8 @@ class getData():
             'LSOA': self._sourceLSOA,
             'IMD': self._sourceIMD,
             'Population': self._sourcePopulation,
-            'GP': self._sourceGP
+            'GP': self._sourceGP,
+            'LSOA-Map': self._sourceMap,
         })
         paths = self._getSourcePath(name)
         data = sourceMap[name]()
@@ -247,3 +255,30 @@ class getData():
                 usecols=cols, dtype=dtype, names=dtype.keys())
             gp_reg.to_json(path)
         return gp_reg
+
+
+    def _sourceMap(self):
+        url = ('https://borders.ukdataservice.ac.uk/ukborders/easy_download/'
+               'prebuilt/shape/infuse_lsoa_lyr_2011.zip')
+        logger.info(f'Downloading LSOA Shapefile from {url}')
+        path, = self._getSourcePath('LSOA-Map')
+        LSOAesneft, = self.fromHost('ESNEFT-LSOA')
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.zip')
+            with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
+                zipRef.extractall(f'{tmp}/')
+            geodf = geopandas.read_file(f'{tmp}/infuse_lsoa_lyr_2011.shp')
+            geodf = geodf.loc[geodf['geo_code'].isin(LSOAesneft)]
+            geodf = geodf.to_crs(epsg='4326')
+
+            geodf.to_file(f'{tmp}/LSOA11-AOI-raw.geojson', driver='GeoJSON')
+            with open(f'{tmp}/LSOA11-AOI-raw.geojson') as geofile:
+                geoLSOA11 = json.load(geofile)
+
+            for i, feature in enumerate(geoLSOA11['features']):
+                geoLSOA11['features'][i]['id'] = (
+                    geoLSOA11['features'][i]['properties']['geo_code'])
+
+            with open(path, 'w') as fh:
+                json.dump(geoLSOA11, fh)
+        return geoLSOA11
