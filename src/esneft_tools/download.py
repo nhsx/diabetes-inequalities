@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import urllib.request
 from pathlib import Path
-
+from urllib.request import urlopen
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +24,12 @@ class getData():
         self.host = ('https://raw.githubusercontent.com/'
                      'StephenRicher/nhsx-internship/main/data/')
         self.options = ({
-            'LSOA': ['lsoa-name.json', 'postcode-lsoa.json'],
-            'IMD': ['imd-statistics.json'],
-            'Population': ['population-lsoa.json'],
-            'GP': ['gp-registrations.json'],
-            'ESNEFT-LSOA': ['lsoa-esneft.json'],
-            'LSOA-Map': ['lsoa-map-esneft.geojson']
+            'LSOA': 'postcode-lsoa.json',
+            'IMD': 'imd-statistics.json',
+            'Population': 'population-lsoa.json',
+            'GP': 'gp-registrations.json',
+            'ESNEFT-LSOA': 'lsoa-esneft.json',
+            'LSOA-Map': 'lsoa-map-esneft.geojson'
 
         })
         self.observedHashes = {}
@@ -50,22 +50,28 @@ class getData():
 
 
     def fromHost(self, name: str):
-        allData = []
-        for filename in self.options[name]:
-            out = f'{self.cache}/{filename}'
-            if os.path.exists(out):
-                logger.info(f'Data already cached - loading from {out}')
-                path = out
-            else:
-                path = f'{self.host}/{os.path.basename(out)}'
+        out = f'{self.cache}/{self.options[name]}'
+        if os.path.exists(out):
+            logger.info(f'Data already cached - loading from {out}')
+            path = out
+            open_ = open
+        else:
+            path = f'{self.host}/{os.path.basename(out)}'
+            open_ = urlopen
+        if path.endswith('.geojson'):
+            with open_(path) as geofile:
+                data = json.load(geofile)
+            if not os.path.exists(out):
+                with open(out, 'w') as fh:
+                    json.dump(geoLSOA11, fh)
+        else:
             try:
                 data = pd.read_json(path)
             except ValueError:
                 data = pd.read_json(path, typ='series').rename('index')
             if not os.path.exists(out):
                 data.to_json(out)
-            allData.append(data)
-        return tuple(allData)
+        return data
 
 
     def fromSource(self, name: str):
@@ -77,25 +83,22 @@ class getData():
             'GP': self._sourceGP,
             'LSOA-Map': self._sourceMap,
         })
-        paths = self._getSourcePath(name)
+
         data = sourceMap[name]()
-        for path in paths:
-            sourceHash = self._checkHash(path)
-            baseName = Path(path).name
-            self.observedHashes[baseName] = sourceHash
-            logger.info(f'Verifying hash of {baseName} ...')
-            if sourceHash == self.expectedHashes[baseName]:
-                logger.info('... source matches host file.')
-            else:
-                logger.error('... source does NOT match host file.')
+        path = self._getSourcePath(name)
+        sourceHash = self._checkHash(path)
+        baseName = Path(path).name
+        self.observedHashes[baseName] = sourceHash
+        logger.info(f'Verifying hash of {baseName} ...')
+        if sourceHash == self.expectedHashes[baseName]:
+            logger.info('... source matches host file.')
+        else:
+            logger.error('... source does NOT match host file.')
         return data
 
 
     def _getSourcePath(self, name: str):
-        paths = []
-        for path in self.options[name]:
-            paths.append(f'{self.cache}/{path}')
-        return tuple(paths)
+        return f'{self.cache}/{self.options[name]}'
 
 
     def _checkHash(self, path: str, readSize: int = 4096):
@@ -113,6 +116,7 @@ class getData():
         url = ('https://www.arcgis.com/sharing/rest/content/items/'
                '6a46e14a6c2441e3ab08c7b277335558/data')
         logger.info(f'Downloading LSOA lookup from {url}')
+        path = self._getSourcePath('LSOA')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
@@ -128,16 +132,10 @@ class getData():
                 f'{tmp}/{name}', usecols=cols, names=dtype.keys(), dtype=dtype,
                 skiprows=1, sep=',', encoding='latin-1')
 
-            paths = self._getSourcePath('LSOA')
-            logger.info(f'Writing LSOA Code: Name map to {paths[0]}')
-            lsoaNameMap = (lookup.set_index('LSOA11CD')['LSOA11NM']
-                           .drop_duplicates())
-            lsoaNameMap.to_json(paths[0])
-
-            logger.info(f'Writing Postcode: LSOA map to {paths[1]}')
+            logger.info(f'Writing Postcode: LSOA map to {path}')
             postcodeLSOAmap = lookup.set_index('PCDS')['LSOA11CD']
-            postcodeLSOAmap.to_json(paths[1])
-        return lsoaNameMap, postcodeLSOAmap
+            postcodeLSOAmap.to_json(path)
+        return postcodeLSOAmap
 
 
     def _sourceIMD(self):
@@ -174,7 +172,7 @@ class getData():
             0, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31,
             34, 37, 40, 43, 46, 49, 52, 53, 54, 55, 56
         ])
-        path, = self._getSourcePath('IMD')
+        path = self._getSourcePath('IMD')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/{name}')
             data = pd.read_csv(
@@ -196,7 +194,7 @@ class getData():
             'q=0.9,image/avif,image/webp,*/*;q=0.8'
         )]
         logger.info(f'Downloading Population statistics from {url}')
-        path, = self._getSourcePath('Population')
+        path = self._getSourcePath('Population')
         with tempfile.TemporaryDirectory() as tmp:
             opener = urllib.request.build_opener()
             opener.addheaders = headers
@@ -239,7 +237,7 @@ class getData():
         url = ('https://files.digital.nhs.uk/AD/6A2BD9/'
                'gp-reg-pat-prac-lsoa-male-female-Jan-21.zip')
         logger.info(f'Downloading GP lookup from {url}')
-        path, = self._getSourcePath('GP')
+        path = self._getSourcePath('GP')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
@@ -261,7 +259,7 @@ class getData():
         url = ('https://borders.ukdataservice.ac.uk/ukborders/easy_download/'
                'prebuilt/shape/infuse_lsoa_lyr_2011.zip')
         logger.info(f'Downloading LSOA Shapefile from {url}')
-        path, = self._getSourcePath('LSOA-Map')
+        path = self._getSourcePath('LSOA-Map')
         LSOAesneft, = self.fromHost('ESNEFT-LSOA')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
