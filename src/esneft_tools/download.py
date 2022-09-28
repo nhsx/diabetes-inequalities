@@ -44,7 +44,7 @@ class getData():
             'postcode-lsoa.json': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
             'imd-statistics.json': '82f654e30cb4691c7495779f52806391519267d68e8427e31ccdd90fb3901216',
             'population-lsoa.json': 'bec0349325a96da48634c6af3ebc8927fc1f79063f0056bebd420aceed13e533',
-            'gp-registrations.json': '33c735683147f7597a59823ab116d182a220d906f266f9da75b6f6d1aaa220ca',
+            'gp-registrations.json': '29edc02bb5b8c6890e697861f979c533939921ca97067b54cca59e794b06d20f',
             'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
         })
 
@@ -250,10 +250,11 @@ class getData():
                 zipRef.extractall(f'{tmp}/')
             dtype = ({
                 'OrganisationCode': str,
+                'OranisationName' : str,
                 'LSOA11CD'        : str,
                 'Patient'         : int,
             })
-            cols = [2, 4, 6]
+            cols = [2, 3, 4, 6]
             gpRegistration = pd.read_csv(
                 f'{tmp}/gp-reg-pat-prac-lsoa-all.csv', skiprows=1,
                 usecols=cols, dtype=dtype, names=dtype.keys())
