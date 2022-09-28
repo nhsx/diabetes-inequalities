@@ -24,12 +24,12 @@ class getData():
         self.host = ('https://raw.githubusercontent.com/'
                      'StephenRicher/nhsx-internship/main/data/')
         self.options = ({
-            'LSOA': 'postcode-lsoa.json',
-            'IMD': 'imd-statistics.json',
-            'Population': 'population-lsoa.json',
-            'GP': 'gp-registrations.json',
-            'ESNEFT-LSOA': 'lsoa-esneft.json',
-            'LSOA-Map': 'lsoa-map-esneft.geojson'
+            'postcodeLSOA': 'postcode-lsoa.json',
+            'imdLSOA': 'imd-statistics.json',
+            'populationLSOA': 'population-lsoa.json',
+            'gpRegistration': 'gp-registrations.json',
+            'esneftLSOA': 'lsoa-esneft.json',
+            'geoLSOA': 'lsoa-map-esneft.geojson'
 
         })
         self.observedHashes = {}
@@ -50,38 +50,44 @@ class getData():
 
 
     def fromHost(self, name: str):
-        out = f'{self.cache}/{self.options[name]}'
-        if os.path.exists(out):
-            logger.info(f'Data already cached - loading from {out}')
-            path = out
-            open_ = open
+        if name == 'all':
+            data = {}
+            for name in self.options:
+                data[name] = self.fromHost(name)
+            return data
         else:
-            path = f'{self.host}/{os.path.basename(out)}'
-            open_ = urlopen
-        if path.endswith('.geojson'):
-            with open_(path) as geofile:
-                data = json.load(geofile)
-            if not os.path.exists(out):
-                with open(out, 'w') as fh:
-                    json.dump(geoLSOA11, fh)
-        else:
-            try:
-                data = pd.read_json(path)
-            except ValueError:
-                data = pd.read_json(path, typ='series').rename('index')
-            if not os.path.exists(out):
-                data.to_json(out)
-        return data
+            out = f'{self.cache}/{self.options[name]}'
+            if os.path.exists(out):
+                logger.info(f'Data already cached - loading from {out}')
+                path = out
+                open_ = open
+            else:
+                path = f'{self.host}/{os.path.basename(out)}'
+                open_ = urlopen
+            if path.endswith('.geojson'):
+                with open_(path) as geofile:
+                    data = json.load(geofile)
+                if not os.path.exists(out):
+                    with open(out, 'w') as fh:
+                        json.dump(geoLSOA11, fh)
+            else:
+                try:
+                    data = pd.read_json(path)
+                except ValueError:
+                    data = pd.read_json(path, typ='series').rename('index')
+                if not os.path.exists(out):
+                    data.to_json(out)
+            return data
 
 
     def fromSource(self, name: str):
         """ Call function according to input """
         sourceMap = ({
-            'LSOA': self._sourceLSOA,
-            'IMD': self._sourceIMD,
-            'Population': self._sourcePopulation,
-            'GP': self._sourceGP,
-            'LSOA-Map': self._sourceMap,
+            'postcodeLSOA': self._sourceLSOA,
+            'imdLSOA': self._sourceIMD,
+            'populationLSOA': self._sourcePopulation,
+            'gpRegistration': self._sourceGP,
+            'geoLSOA': self._sourceMap,
         })
 
         data = sourceMap[name]()
@@ -116,7 +122,7 @@ class getData():
         url = ('https://www.arcgis.com/sharing/rest/content/items/'
                '6a46e14a6c2441e3ab08c7b277335558/data')
         logger.info(f'Downloading LSOA lookup from {url}')
-        path = self._getSourcePath('LSOA')
+        path = self._getSourcePath('postcodeLSOA')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
@@ -133,9 +139,9 @@ class getData():
                 skiprows=1, sep=',', encoding='latin-1')
 
             logger.info(f'Writing Postcode: LSOA map to {path}')
-            postcodeLSOAmap = lookup.set_index('PCDS')['LSOA11CD']
-            postcodeLSOAmap.to_json(path)
-        return postcodeLSOAmap
+            postcodeLSOA = lookup.set_index('PCDS')['LSOA11CD']
+            postcodeLSOA.to_json(path)
+        return postcodeLSOA
 
 
     def _sourceIMD(self):
@@ -172,14 +178,14 @@ class getData():
             0, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31,
             34, 37, 40, 43, 46, 49, 52, 53, 54, 55, 56
         ])
-        path = self._getSourcePath('IMD')
+        path = self._getSourcePath('imdLSOA')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/{name}')
-            data = pd.read_csv(
+            imdLSOA = pd.read_csv(
                 f'{tmp}/{name}', usecols=cols, names=dtype.keys(),
                 dtype=dtype, skiprows=1, sep=',').set_index('LSOA11CD')
-            data.to_json(path)
-        return data
+            imdLSOA.to_json(path)
+        return imdLSOA
 
 
     def _sourcePopulation(self):
@@ -194,20 +200,20 @@ class getData():
             'q=0.9,image/avif,image/webp,*/*;q=0.8'
         )]
         logger.info(f'Downloading Population statistics from {url}')
-        path = self._getSourcePath('Population')
+        path = self._getSourcePath('populationLSOA')
         with tempfile.TemporaryDirectory() as tmp:
             opener = urllib.request.build_opener()
             opener.addheaders = headers
             urllib.request.install_opener(opener)
             urllib.request.urlretrieve(url, f'{tmp}/{name}')
             pop = self._processPopulationSheet(f'{tmp}/{name}')
-            pop_summary = (
+            populationLSOA = (
                 pop.groupby('LSOA11CD')
                 .apply(self._summarisePopulation)
                 .rename({0: 'medianAge', 1: 'Population'}, axis=1)
             )
-            pop_summary.to_json(path)
-        return pop_summary
+            populationLSOA.to_json(path)
+        return populationLSOA
 
 
     def _processPopulationSheet(self, path: str):
@@ -237,7 +243,7 @@ class getData():
         url = ('https://files.digital.nhs.uk/AD/6A2BD9/'
                'gp-reg-pat-prac-lsoa-male-female-Jan-21.zip')
         logger.info(f'Downloading GP lookup from {url}')
-        path = self._getSourcePath('GP')
+        path = self._getSourcePath('gpRegistration')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
@@ -248,25 +254,25 @@ class getData():
                 'Patient'         : int,
             })
             cols = [2, 4, 6]
-            gp_reg = pd.read_csv(
+            gpRegistration = pd.read_csv(
                 f'{tmp}/gp-reg-pat-prac-lsoa-all.csv', skiprows=1,
                 usecols=cols, dtype=dtype, names=dtype.keys())
-            gp_reg.to_json(path)
-        return gp_reg
+            gpRegistration.to_json(path)
+        return gpRegistration
 
 
     def _sourceMap(self):
         url = ('https://borders.ukdataservice.ac.uk/ukborders/easy_download/'
                'prebuilt/shape/infuse_lsoa_lyr_2011.zip')
         logger.info(f'Downloading LSOA Shapefile from {url}')
-        path = self._getSourcePath('LSOA-Map')
-        LSOAesneft, = self.fromHost('ESNEFT-LSOA')
+        path = self._getSourcePath('geoLSOA')
+        esneftLSOA, = self.fromHost('esneftLSOA')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
                 zipRef.extractall(f'{tmp}/')
             geodf = geopandas.read_file(f'{tmp}/infuse_lsoa_lyr_2011.shp')
-            geodf = geodf.loc[geodf['geo_code'].isin(LSOAesneft)]
+            geodf = geodf.loc[geodf['geo_code'].isin(esneftLSOA)]
             geodf = geodf.to_crs(epsg='4326')
 
             geodf.to_file(f'{tmp}/LSOA11-AOI-raw.geojson', driver='GeoJSON')

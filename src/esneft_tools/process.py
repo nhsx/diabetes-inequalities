@@ -24,27 +24,30 @@ def _parseIoDcols(imd: pd.DataFrame, iod_cols: list = None):
     return iod_cols
 
 
-def getGPsummary(gp_reg, imd, iod_cols: list = None):
+def getGPsummary(gpRegistration, imdLSOA, iod_cols: list = None, **kwargs):
     """ Compute mean IoD per GP practise weighted by patient population """
-    iod_cols = _parseIoDcols(imd, iod_cols)
+    iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     summary = (pd
-        .merge(gp_reg, imd[iod_cols], left_on='LSOA11CD', right_index=True)
+        .merge(gpRegistration, imdLSOA[iod_cols],
+               left_on='LSOA11CD', right_index=True)
         .groupby(['OrganisationCode'])
         .apply(_weightedMean, iod_cols))
-    summary['Patients'] = gp_reg.groupby('OrganisationCode')['Patient'].sum()
+    summary['Patients'] = (
+        gpRegistration.groupby('OrganisationCode')['Patient'].sum())
     return summary
 
 
-def getLSOAsummary(imd, gp_reg, pop_summary, lsoa_esneft,
-                   iod_cols: list = None):
+def getLSOAsummary(imdLSOA, gpRegistration, populationLSOA, esneftLSOA,
+                   iod_cols: list = None, **kwargs):
     """ Return summary statistics per LSOA """
-    iod_cols = _parseIoDcols(imd, iod_cols)
+    iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     # Get GP registration by LSOA
-    gp_reg_by_lsoa = gp_reg.groupby('LSOA11CD')['Patient'].sum()
+    gpRegistrationByLSOA = gpRegistration.groupby('LSOA11CD')['Patient'].sum()
     summary = pd.merge(
-        pop_summary, gp_reg_by_lsoa,
+        populationLSOA, gpRegistrationByLSOA,
         left_index=True, right_index=True, how='outer')
-    summary['ESNEFT'] = summary.index.isin(lsoa_esneft)
+    summary['ESNEFT'] = summary.index.isin(esneftLSOA)
     summary = pd.merge(
-        summary, imd[iod_cols], left_index=True, right_index=True, how='outer')
+        summary, imdLSOA[iod_cols],
+        left_index=True, right_index=True, how='outer')
     return summary
