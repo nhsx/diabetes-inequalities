@@ -37,7 +37,7 @@ setup(
         'numpy',
         'plotly',
         'pandas',
-        'pyarrow'
+        'pyarrow',
         'seaborn',
         'geopandas',
         'matplotlib'
