@@ -37,9 +37,10 @@ setup(
         'numpy',
         'plotly',
         'pandas',
+        'pyarrow'
         'seaborn',
         'geopandas',
-        'matplotlib',
+        'matplotlib'
     ],
     license='MIT',
     classifiers=[
