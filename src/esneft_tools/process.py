@@ -37,17 +37,30 @@ def getGPsummary(gpRegistration, imdLSOA, iod_cols: list = None, **kwargs):
     return summary
 
 
-def getLSOAsummary(imdLSOA, gpRegistration, populationLSOA, esneftLSOA,
-                   iod_cols: list = None, **kwargs):
+def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
+                   esneftLSOA, iod_cols: list = None, **kwargs):
     """ Return summary statistics per LSOA """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
+    populationLSOA = (
+        populationLSOA.groupby('LSOA11CD')
+        .apply(_summarisePopulation)
+        .rename({0: 'Age (median)', 1: 'Population'}, axis=1))
     # Get GP registration by LSOA
     gpRegistrationByLSOA = gpRegistration.groupby('LSOA11CD')['Patient'].sum()
-    summary = pd.merge(
-        populationLSOA, gpRegistrationByLSOA,
-        left_index=True, right_index=True, how='outer')
-    summary['ESNEFT'] = summary.index.isin(esneftLSOA)
-    summary = pd.merge(
-        summary, imdLSOA[iod_cols],
-        left_index=True, right_index=True, how='outer')
+    # Extract LSOA Name
+    lsoaName = (
+        postcodeLSOA.reset_index(drop=True)
+        .drop_duplicates().set_index('LSOA11CD'))
+    lsoaName['ESNEFT'] = lsoaName.index.isin(esneftLSOA)
+    summary = pd.concat([
+        lsoaName, populationLSOA,
+        gpRegistrationByLSOA, imdLSOA[iod_cols]], axis=1)
     return summary
+
+
+def _summarisePopulation(x):
+    """ Get median Age and total populaiton by LSOA"""
+    allAges = []
+    for row in x.itertuples():
+        allAges.extend([row.Age] * row.Population)
+    return pd.Series([np.median(allAges), x['Population'].sum()])
