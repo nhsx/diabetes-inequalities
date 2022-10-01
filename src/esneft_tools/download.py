@@ -2,6 +2,7 @@
 
 import os
 import json
+import glob
 import hashlib
 import zipfile
 import logging
@@ -12,6 +13,7 @@ import numpy as np
 import pandas as pd
 import urllib.request
 from pathlib import Path
+from pyproj import Transformer
 from urllib.request import urlopen
 
 logger = logging.getLogger(__name__)
@@ -138,14 +140,39 @@ class getData():
                 'LSOA11NM': str, # LSOA Name (Census 2011)
             })
             cols = [2, 7, 10]
-            lookup = pd.read_csv(
+            postcodeLSOA = pd.read_csv(
                 f'{tmp}/{name}', usecols=cols, names=dtype.keys(), dtype=dtype,
                 skiprows=1, sep=',', encoding='latin-1')
+        postcodeLSOA = postcodeLSOA.set_index('PCDS')
+        esneftLSOA = self.fromHost('esneftLSOA')
+        postcodeLSOA['ESNEFT'] = postcodeLSOA['LSOA11CD'].isin(esneftLSOA)
+        pcdGPS = self._sourcePostcodeLatLong()
 
-            logger.info(f'Writing Postcode: LSOA map to {path}')
-            postcodeLSOA = lookup.set_index('PCDS')
-            postcodeLSOA.to_parquet(path)
+        postcodeLSOA = (
+            pd.concat([postcodeLSOA, pcdGPS], axis=1)
+            .drop(['Eastings', 'Northings'], axis=1))	
+        logger.info(f'Writing Postcode: LSOA map to {path}')
+        postcodeLSOA.to_parquet(path)
         return postcodeLSOA
+
+
+    def _sourcePostcodeLatLong(self):
+        url = ('https://api.os.uk/downloads/v1/products/CodePointOpen/'
+               'downloads?area=GB&format=CSV&redirect')
+        logger.info(f'Downloading Postcode Lat-Long lookup from {url}')
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.zip')
+            with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
+                zipRef.extractall(f'{tmp}/')
+            files = glob.glob(f'{tmp}/Data/CSV/*csv')
+            cols = ['PCDS', 'Eastings', 'Northings']
+            pcdGPS = pd.concat([
+                pd.read_csv(file, usecols=[0,2,3], names=cols, sep=',')
+                for file in files]).set_index('PCDS')
+        tf = Transformer.from_crs('epsg:27700', 'epsg:4326')
+        pcdGPS['Lat'], pcdGPS['Long'] = zip(*pcdGPS.apply(
+            lambda x: tf.transform(x['Eastings'], x['Northings']), axis=1))
+        return pcdGPS
 
 
     def _sourceIMD(self):
