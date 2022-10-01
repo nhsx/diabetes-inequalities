@@ -24,10 +24,10 @@ class getData():
         self.host = ('https://raw.githubusercontent.com/'
                      'StephenRicher/nhsx-internship/main/data/')
         self.options = ({
-            'postcodeLSOA': 'postcode-lsoa.json',
-            'imdLSOA': 'imd-statistics.json',
-            'populationLSOA': 'population-lsoa.json',
-            'gpRegistration': 'gp-registrations.json',
+            'postcodeLSOA': 'postcode-lsoa.parquet',
+            'imdLSOA': 'imd-statistics.parquet',
+            'populationLSOA': 'population-lsoa.parquet',
+            'gpRegistration': 'gp-registrations.parquet',
             'esneftLSOA': 'lsoa-esneft.json',
             'geoLSOA': 'lsoa-map-esneft.geojson'
 
@@ -40,11 +40,11 @@ class getData():
     @property
     def expectedHashes(self):
         return ({
-            'lsoa-name.json': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
-            'postcode-lsoa.json': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
-            'imd-statistics.json': '82f654e30cb4691c7495779f52806391519267d68e8427e31ccdd90fb3901216',
-            'population-lsoa.json': 'bec0349325a96da48634c6af3ebc8927fc1f79063f0056bebd420aceed13e533',
-            'gp-registrations.json': '29edc02bb5b8c6890e697861f979c533939921ca97067b54cca59e794b06d20f',
+            'lsoa-name.parquet': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
+            'postcode-lsoa.parquet': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
+            'imd-statistics.parquet': '4a20c6a394124205a767e2f420efb7604d7a9b45ce307cc3dd39fc6df7fc62ff',
+            'population-lsoa.parquet': '4958ab685cd78ded47ecba494a9e1130ae7a2758bc8206cbeb6af3b5466f801a',
+            'gp-registrations.parquet': 'b039285e697264315beb13d8922a605bdb30fe668d598d4ce9d2360f099831a8',
             'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
         })
 
@@ -70,6 +70,10 @@ class getData():
                 if not os.path.exists(out):
                     with open(out, 'w') as fh:
                         json.dump(geoLSOA11, fh)
+            elif path.endswith('.parquet'):
+                data = pd.read_parquet(path)
+                if not os.path.exists(out):
+                    data.to_parquet(out)
             else:
                 try:
                     data = pd.read_json(path)
@@ -139,13 +143,13 @@ class getData():
                 skiprows=1, sep=',', encoding='latin-1')
 
             logger.info(f'Writing Postcode: LSOA map to {path}')
-            postcodeLSOA = lookup.set_index('PCDS')['LSOA11CD']
-            postcodeLSOA.to_json(path)
+            postcodeLSOA = lookup.set_index('PCDS')
+            postcodeLSOA.to_parquet(path)
         return postcodeLSOA
 
 
     def _sourceIMD(self):
-        name = 'imd-statistics.json'
+        name = 'imd-statistics.parquet'
         url = ('https://assets.publishing.service.gov.uk/government/uploads/system'
                '/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__'
                'Ranks__Deciles_and_Population_Denominators_3.csv')
@@ -184,7 +188,7 @@ class getData():
             imdLSOA = pd.read_csv(
                 f'{tmp}/{name}', usecols=cols, names=dtype.keys(),
                 dtype=dtype, skiprows=1, sep=',').set_index('LSOA11CD')
-            imdLSOA.to_json(path)
+            imdLSOA.to_parquet(path)
         return imdLSOA
 
 
@@ -199,49 +203,39 @@ class getData():
             'text/html,application/xhtml+xml,application/xml;'
             'q=0.9,image/avif,image/webp,*/*;q=0.8'
         )]
-        logger.info(f'Downloading Population statistics from {url}')
         path = self._getSourcePath('populationLSOA')
         with tempfile.TemporaryDirectory() as tmp:
             opener = urllib.request.build_opener()
             opener.addheaders = headers
             urllib.request.install_opener(opener)
             urllib.request.urlretrieve(url, f'{tmp}/{name}')
-            pop = self._processPopulationSheet(f'{tmp}/{name}')
-            populationLSOA = (
-                pop.groupby('LSOA11CD')
-                .apply(self._summarisePopulation)
-                .rename({0: 'medianAge', 1: 'Population'}, axis=1)
-            )
-            populationLSOA.to_json(path)
+            populationLSOA = pd.concat([
+                self._processPopulationSheet(f'{tmp}/{name}', 'Male'),
+                self._processPopulationSheet(f'{tmp}/{name}', 'Female'),
+            ])
+            populationLSOA.to_parquet(path)
         return populationLSOA
 
 
-    def _processPopulationSheet(self, path: str):
+    def _processPopulationSheet(self, path: str, sex: str):
         dropCols = ([
             'LSOA Name', 'LA Code (2018 boundaries)',
             'LA name (2018 boundaries)', 'LA Code (2021 boundaries)',
             'LA name (2021 boundaries)', 'All Ages'
         ])
-        pop = (pd.read_excel(path, sheet_name='Mid-2020 Persons', skiprows=4)
+        pop = (pd.read_excel(path, sheet_name=f'Mid-2020 {sex}s', skiprows=4)
                  .rename({'LSOA Code': 'LSOA11CD', '90+': 90}, axis=1)
                  .drop(dropCols, axis=1)
-                 .melt(id_vars='LSOA11CD', var_name='AgeYr',
+                 .melt(id_vars='LSOA11CD', var_name='Age',
                        value_name='Population')
         )
+        pop['Sex'] = sex
         return pop
 
 
-    def _summarisePopulation(self, x):
-        """ Get median Age and total populaiton by LSOA"""
-        allAges = []
-        for row in x.itertuples():
-            allAges.extend([row.AgeYr] * row.Population)
-        return pd.Series([np.median(allAges), x['Population'].sum()])
-
-
     def _sourceGP(self):
-        url = ('https://files.digital.nhs.uk/AD/6A2BD9/'
-               'gp-reg-pat-prac-lsoa-male-female-Jan-21.zip')
+        url = ('https://files.digital.nhs.uk/0E/59E17A/'
+               'gp-reg-pat-prac-lsoa-male-female-July-2022.zip')
         logger.info(f'Downloading GP lookup from {url}')
         path = self._getSourcePath('gpRegistration')
         with tempfile.TemporaryDirectory() as tmp:
@@ -258,7 +252,7 @@ class getData():
             gpRegistration = pd.read_csv(
                 f'{tmp}/gp-reg-pat-prac-lsoa-all.csv', skiprows=1,
                 usecols=cols, dtype=dtype, names=dtype.keys())
-            gpRegistration.to_json(path)
+            gpRegistration.to_parquet(path)
         return gpRegistration
 
 
@@ -267,7 +261,7 @@ class getData():
                'prebuilt/shape/infuse_lsoa_lyr_2011.zip')
         logger.info(f'Downloading LSOA Shapefile from {url}')
         path = self._getSourcePath('geoLSOA')
-        esneftLSOA, = self.fromHost('esneftLSOA')
+        esneftLSOA = self.fromHost('esneftLSOA')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
