@@ -3,12 +3,14 @@
 import os
 import json
 import glob
+import gzip
 import hashlib
 import zipfile
 import logging
 import tempfile
 import pathlib
 import geopandas
+import osmnx as ox
 import numpy as np
 import pandas as pd
 import urllib.request
@@ -31,7 +33,8 @@ class getData():
             'populationLSOA': 'population-lsoa.parquet',
             'gpRegistration': 'gp-registrations.parquet',
             'esneftLSOA': 'lsoa-esneft.json',
-            'geoLSOA': 'lsoa-map-esneft.geojson'
+            'geoLSOA': 'lsoa-map-esneft.geojson',
+            'esneftOSM': 'esneft-highways.osm.gz'
 
         })
         self.observedHashes = {}
@@ -58,13 +61,13 @@ class getData():
                 data[name] = self.fromHost(name)
             return data
         else:
-            out = f'{self.cache}/{self.options[name]}'
+            out = f'{self.cache}/{self.options[name].removesuffix(".gz")}'
             if os.path.exists(out):
                 logger.info(f'Data already cached - loading from {out}')
                 path = out
                 open_ = open
             else:
-                path = f'{self.host}/{os.path.basename(out)}'
+                path = f'{self.host}/{self.options[name]}'
                 open_ = urlopen
             if path.endswith('.geojson'):
                 with open_(path) as geofile:
@@ -76,13 +79,20 @@ class getData():
                 data = pd.read_parquet(path)
                 if not os.path.exists(out):
                     data.to_parquet(out)
-            else:
+            elif path.endswith('.json'):
                 try:
                     data = pd.read_json(path)
                 except ValueError:
                     data = pd.read_json(path, typ='series').rename('index')
                 if not os.path.exists(out):
                     data.to_json(out)
+            elif path.endswith('.osm.gz') or path.endswith('.osm'):
+                if path.endswith('.osm.gz'):
+                    with open_(path) as osm:
+                        with gzip.open(osm, 'rt') as fh, open(out, 'w') as oh:
+                            for line in fh:
+                                oh.write(line)
+                data = ox.graph.graph_from_xml(out, simplify=True)
             return data
 
 
@@ -145,12 +155,19 @@ class getData():
                 skiprows=1, sep=',', encoding='latin-1')
         postcodeLSOA = postcodeLSOA.set_index('PCDS')
         esneftLSOA = self.fromHost('esneftLSOA')
-        postcodeLSOA['ESNEFT'] = postcodeLSOA['LSOA11CD'].isin(esneftLSOA)
         pcdGPS = self._sourcePostcodeLatLong()
-
         postcodeLSOA = (
             pd.concat([postcodeLSOA, pcdGPS], axis=1)
-            .drop(['Eastings', 'Northings'], axis=1))	
+            .drop(['Eastings', 'Northings'], axis=1))
+        postcodeLSOA['ESNEFT'] = postcodeLSOA['LSOA11CD'].isin(esneftLSOA)
+        G = self.fromHost('esneftOSM')
+        # Get rows in ESNEFT with Lat Long
+        valid = (postcodeLSOA['ESNEFT']
+                 & postcodeLSOA[['Lat', 'Long']].notna().all(axis=1))
+        postcodeLSOA.loc[valid, 'Node'] = (
+            ox.distance.nearest_nodes(G,
+                postcodeLSOA.loc[valid, 'Long'],
+                postcodeLSOA.loc[valid, 'Lat']))
         logger.info(f'Writing Postcode: LSOA map to {path}')
         postcodeLSOA.to_parquet(path)
         return postcodeLSOA
