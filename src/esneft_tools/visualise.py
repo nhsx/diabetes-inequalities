@@ -18,6 +18,7 @@ def choropleth(data, geojson, colour, location=None, cmap='viridis'):
     fig = px.choropleth_mapbox(
         data, geojson=geojson,
         locations=location, color=colour,
+        hover_data=['LSOA11NM'],
         color_continuous_scale=cmap,
         mapbox_style="carto-positron",
         zoom=8.5, center = {'lat': 52.08, 'lon': 1.02},
