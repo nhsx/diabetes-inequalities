@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import json
 import glob
 import gzip
@@ -20,6 +21,10 @@ from urllib.request import urlopen
 
 logger = logging.getLogger(__name__)
 
+try:
+    import osmnx as ox
+except ModuleNotFoundError:
+    logger.error('OSMNX not found.')
 
 class getData():
 
@@ -32,12 +37,14 @@ class getData():
             'imdLSOA': 'imd-statistics.parquet',
             'populationLSOA': 'population-lsoa.parquet',
             'gpRegistration': 'gp-registrations.parquet',
+            'gpPractise': 'gp-practises.parquet',
             'esneftLSOA': 'lsoa-esneft.json',
             'geoLSOA': 'lsoa-map-esneft.geojson',
             'esneftOSM': 'esneft-highways.osm.gz'
 
         })
         self.observedHashes = {}
+        self.osmnx = 'osmnx' in sys.modules
         os.makedirs(self.cache , exist_ok=True)
         logger.info(f'Retrieved files will be cached to {self.cache}')
 
@@ -46,10 +53,11 @@ class getData():
     def expectedHashes(self):
         return ({
             'lsoa-name.parquet': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
-            'postcode-lsoa.parquet': 'eec8f006b1b1f3e6438bc9a3ac96be6bc316015c5321615a79417e295747d649',
+            'postcode-lsoa.parquet': 'fed757144678f1de31bc5db40ec6fe67f4aea5058a720cac4b80ea6b28e4c49f',
             'imd-statistics.parquet': '4a20c6a394124205a767e2f420efb7604d7a9b45ce307cc3dd39fc6df7fc62ff',
             'population-lsoa.parquet': '4958ab685cd78ded47ecba494a9e1130ae7a2758bc8206cbeb6af3b5466f801a',
             'gp-registrations.parquet': 'b039285e697264315beb13d8922a605bdb30fe668d598d4ce9d2360f099831a8',
+            'gp-practises.parquet': 'b5a600f47443a5cc20c1322ed90d879380c8c9f909886bb4ed7a20203395d8f4',
             'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
         })
 
@@ -60,6 +68,9 @@ class getData():
             for name in self.options:
                 data[name] = self.fromHost(name)
             return data
+        elif (name == 'esneftOSM') and (not self.osmnx):
+            logger.error(f'OSMNX not installed - skipping {name}.')
+            return None
         else:
             out = f'{self.cache}/{self.options[name].removesuffix(".gz")}'
             if os.path.exists(out):
@@ -102,7 +113,8 @@ class getData():
             'postcodeLSOA': self._sourceLSOA,
             'imdLSOA': self._sourceIMD,
             'populationLSOA': self._sourcePopulation,
-            'gpRegistration': self._sourceGP,
+            'gpRegistration': self._sourceGPregistration,
+            'gpPractise': self._sourceGPpractise,
             'geoLSOA': self._sourceMap,
         })
 
@@ -168,6 +180,7 @@ class getData():
             ox.distance.nearest_nodes(G,
                 postcodeLSOA.loc[valid, 'Long'],
                 postcodeLSOA.loc[valid, 'Lat']))
+        postcodeLSOA['Node'] = postcodeLSOA['Node'].fillna(-1).astype(int)
         logger.info(f'Writing Postcode: LSOA map to {path}')
         postcodeLSOA.to_parquet(path)
         return postcodeLSOA
@@ -232,7 +245,7 @@ class getData():
             imdLSOA = pd.read_csv(
                 f'{tmp}/{name}', usecols=cols, names=dtype.keys(),
                 dtype=dtype, skiprows=1, sep=',').set_index('LSOA11CD')
-            imdLSOA.to_parquet(path)
+        imdLSOA.to_parquet(path)
         return imdLSOA
 
 
@@ -257,7 +270,7 @@ class getData():
                 self._processPopulationSheet(f'{tmp}/{name}', 'Male'),
                 self._processPopulationSheet(f'{tmp}/{name}', 'Female'),
             ])
-            populationLSOA.to_parquet(path)
+        populationLSOA.to_parquet(path)
         return populationLSOA
 
 
@@ -277,10 +290,10 @@ class getData():
         return pop
 
 
-    def _sourceGP(self):
+    def _sourceGPregistration(self):
         url = ('https://files.digital.nhs.uk/0E/59E17A/'
                'gp-reg-pat-prac-lsoa-male-female-July-2022.zip')
-        logger.info(f'Downloading GP lookup from {url}')
+        logger.info(f'Downloading GP registration lookup from {url}')
         path = self._getSourcePath('gpRegistration')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
@@ -296,8 +309,60 @@ class getData():
             gpRegistration = pd.read_csv(
                 f'{tmp}/gp-reg-pat-prac-lsoa-all.csv', skiprows=1,
                 usecols=cols, dtype=dtype, names=dtype.keys())
-            gpRegistration.to_parquet(path)
+        gpRegistration.to_parquet(path)
         return gpRegistration
+
+
+    def _sourceGPpractise(self):
+        url = 'https://files.digital.nhs.uk/assets/ods/current/epraccur.zip'
+        logger.info(f'Downloading GP practise lookup from {url}')
+        path = self._getSourcePath('gpPractise')
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.zip')
+            with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
+                zipRef.extractall(f'{tmp}/')
+            dtype = ({
+                'OrganisationCode'  : str,
+                'OrganisationName'  : str,
+                'PCDS'              : str,
+                'OpenDate'          : str,
+                'CloseDate'         : str,
+                'Status'            : str,
+                'PrescribingSetting': int
+            })
+            cols = [0, 1, 9, 10, 11, 12, 25]
+            gpPractises = pd.read_csv(
+                f'{tmp}//epraccur.csv', usecols=cols, names=dtype.keys(),
+                dtype=dtype, sep=',', encoding='latin-1')
+        statusMap = ({
+            'A': 'Active',
+            'C': 'Closed',
+            'D': 'Dormant',
+            'P': 'Proposed'
+        })
+        prescribingSetting = ({
+            0: 'Other', 1: 'WIC Practice', 2: 'OOH Practice',
+            3: 'WIC + OOH Practice', 4: 'GP Practice', 8: 'Public Health Service',
+            9: 'Community Health Service', 10: 'Hospital Service',
+            11: 'Optometry Service', 12: 'Urgent & Emergency Care',
+            13: 'Hospice', 14: 'Care Home / Nursing Home', 15: 'Border Force',
+            16: 'Young Offender Institution', 17: 'Secure Training Centre',
+            18: 'Secure Childrens Home', 19: 'Immigration Removal Centre',
+            20: 'Court', 21: 'Police Custody', 22: 'Sexual Assault Referrral Centre',
+            24: 'Other - Justice Estate', 25: 'Prison'
+        })
+        gpPractises['OpenDate'] = (
+            pd.to_datetime(gpPractises['OpenDate'], format="%Y/%m/%d"))
+        gpPractises['CloseDate'] = (
+            pd.to_datetime(gpPractises['CloseDate'], format="%Y/%m/%d"))
+
+        gpPractises['Status'] = gpPractises['Status'].replace(statusMap)
+        gpPractises['PrescribingSetting'] = (
+            gpPractises['PrescribingSetting'].replace(prescribingSetting))
+        gpPractises = gpPractises.set_index('OrganisationCode')
+        logger.info(f'Writing GP practise lookup to {path}')
+        gpPractises.to_parquet(path)
+        return gpPractises
 
 
     def _sourceMap(self):

@@ -24,7 +24,8 @@ def _parseIoDcols(imd: pd.DataFrame, iod_cols: list = None):
     return iod_cols
 
 
-def getGPsummary(gpRegistration, imdLSOA, iod_cols: list = None, **kwargs):
+def getGPsummary(gpRegistration, gpPractise, postcodeLSOA, imdLSOA,
+                iod_cols: list = None, **kwargs):
     """ Compute mean IoD per GP practise weighted by patient population """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     summary = (pd
@@ -34,11 +35,17 @@ def getGPsummary(gpRegistration, imdLSOA, iod_cols: list = None, **kwargs):
         .apply(_weightedMean, iod_cols))
     summary['Patients'] = (
         gpRegistration.groupby('OrganisationCode')['Patient'].sum())
+    summary = pd.concat([summary, gpPractise], axis=1)
+    summary = pd.merge(
+        summary, postcodeLSOA[['Lat', 'Long']], left_on='PCDS',
+        right_index=True, how='left')
+    summary['ESNEFT'] = summary['PCDS'].isin(
+        postcodeLSOA.loc[postcodeLSOA['ESNEFT']].index)
     return summary
 
 
 def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
-                   esneftLSOA, iod_cols: list = None, **kwargs):
+                   iod_cols: list = None, **kwargs):
     """ Return summary statistics per LSOA """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     populationLSOA = (
@@ -50,8 +57,7 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
     # Extract LSOA Name
     lsoaName = (
         postcodeLSOA.reset_index(drop=True)
-        .drop_duplicates().set_index('LSOA11CD'))
-    lsoaName['ESNEFT'] = lsoaName.index.isin(esneftLSOA)
+        .set_index('LSOA11CD')['LSOA11NM'].drop_duplicates())
     summary = pd.concat([
         lsoaName, populationLSOA,
         gpRegistrationByLSOA, imdLSOA[iod_cols]], axis=1)
