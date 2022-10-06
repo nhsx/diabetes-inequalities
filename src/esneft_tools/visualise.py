@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 import logging
-import pandas as pd
+import matplotlib
+import numpy as np
+import osmnx as ox
+import networkx as nx
 import plotly.express as px
-
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +30,14 @@ def choroplethLSOA(LSOAsummary, geojson, colour, location=None, cmap='viridis'):
     return fig
 
 
-def scatterGP(GPsummary):
+def scatterGP(GPsummary, minCount=1):
     GPsummary = GPsummary.copy()
+    # Aggregate settings with too few counts
+    count = GPsummary['PrescribingSetting'].value_counts()
+    tooFew = count[count < minCount].index
+    GPsummary['PrescribingSetting'] = GPsummary['PrescribingSetting'].apply(
+        lambda x: 'Other' if x in tooFew else x
+    )
     GPsummary['IMD'] = GPsummary['IMD'].apply(lambda x: f'{x:.3f}')
     GPsummary['OpenDate'] = GPsummary['OpenDate'].astype(str)
     GPsummary['Patients'] = GPsummary['Patients'].fillna(-1).astype(int)
@@ -40,40 +49,45 @@ def scatterGP(GPsummary):
         color_discrete_sequence=px.colors.qualitative.Plotly,
         mapbox_style="carto-positron",
         zoom=8.2, center = {'lat': 52.08, 'lon': 1.02},
-        width=870, height=600, opacity=0.5
+        width=870, height=600, opacity=1
 
     )
     fig.update_layout(legend=dict(
-        orientation='h', yanchor='bottom', y=-0.2, xanchor='left', x=0,
-        title=None))
+        orientation='h', yanchor='bottom', y=1.02,
+        xanchor='right', x=1, title=None))
     return fig
 
 
-def scatterGP2(LSOAsummary, GPsummary, geojson, colour, location=None, cmap='viridis'):
-    assert colour in LSOAsummary.columns
-    if location is None:
-        location = LSOAsummary.index.name if LSOAsummary.index.name else 'index'
-        LSOAsummary = LSOAsummary.reset_index()
-    else:
-        assert location in LSOAsummary.columns
-    fig = px.choropleth_mapbox(
-        LSOAsummary, geojson=geojson,
-        locations=location, color=colour,
-        hover_data=['LSOA11NM'],
-        color_continuous_scale=cmap,
-        mapbox_style="carto-positron",
-        zoom=8.5, center = {'lat': 52.08, 'lon': 1.02},
-        width=870, height=700, opacity=0.5
-    )
-    fig.update_layout(coloraxis_colorbar_x=False)
-    fig2 = px.scatter_mapbox(
-        GPsummary, lat='Lat', lon='Long',
-        hover_name='OrganisationName', color='PrescribingSetting',
-        color_discrete_sequence=px.colors.qualitative.Plotly
+def _setNodeProperties(
+        G, distances, vmin=0, vmax=0.9, quantile=True,
+        cmap='viridis_r', size=10):
+    if quantile:
+        vmax = np.quantile(distances['Distance'], vmax)
+    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    cmap = matplotlib.cm.get_cmap(cmap)
+    colours = []
+    sizes = []
+    for node in G.nodes():
+        if node not in distances.index:
+            colour = (1,1,1,1)
+            size = 0
+        else:
+            colour = cmap(norm(distances.loc[node, 'Distance']))
+            size = 10
+        colours.append(colour)
+        sizes.append(size)
+    return colours, sizes
 
-    )
-    for trace in fig2.data:
-        fig.add_trace(trace)
-    for i, frame in enumerate(fig.frames):
-        fig.frames[i].data += (fig2.frames[i].data[0],)
-    return fig
+
+def plotTravelTime(
+        G, distances, quantile=True, maxQuant=0.95,
+        cmap='viridis_r', size=10, dpi=300, alpha=0.8,
+        figsize=(15,15),out=None):
+    colours, sizes = _setNodeProperties(
+        G, distances, vmin=0, vmax=maxQuant,
+        quantile=quantile, cmap=cmap, size=size)
+    fig, ax = ox.plot_graph(
+        G, node_color=colours, node_size=sizes,
+        node_alpha=alpha, figsize=figsize,
+        save=(out is not None), dpi=dpi, filepath=out)
+    return fig, ax
