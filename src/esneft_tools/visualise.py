@@ -1,14 +1,21 @@
 #!/usr/bin/env python
 
+import sys
 import logging
 import matplotlib
 import numpy as np
-import osmnx as ox
 import networkx as nx
 import plotly.express as px
 from collections import defaultdict
 
+
 logger = logging.getLogger(__name__)
+
+
+try:
+    import osmnx as ox
+except ModuleNotFoundError:
+    logger.error('OSMNX not found - some features are unavailable.')
 
 
 def choroplethLSOA(LSOAsummary, geojson, colour, location=None, cmap='viridis'):

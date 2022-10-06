@@ -15,15 +15,18 @@ import numpy as np
 import pandas as pd
 import urllib.request
 from pathlib import Path
+from datetime import date
 from pyproj import Transformer
 from urllib.request import urlopen
 
+
 logger = logging.getLogger(__name__)
+
 
 try:
     import osmnx as ox
 except ModuleNotFoundError:
-    logger.error('OSMNX not found.')
+    logger.error('OSMNX not found - some features are unavailable.')
 
 class getData():
 
@@ -37,6 +40,7 @@ class getData():
             'populationLSOA': 'population-lsoa.parquet',
             'gpRegistration': 'gp-registrations.parquet',
             'gpPractise': 'gp-practises.parquet',
+            'gpStaff': 'gp-staff.parquet',
             'esneftLSOA': 'lsoa-esneft.json',
             'geoLSOA': 'lsoa-map-esneft.geojson',
             'esneftOSM': 'esneft-highways.osm.gz'
@@ -57,6 +61,7 @@ class getData():
             'population-lsoa.parquet': '4958ab685cd78ded47ecba494a9e1130ae7a2758bc8206cbeb6af3b5466f801a',
             'gp-registrations.parquet': 'b039285e697264315beb13d8922a605bdb30fe668d598d4ce9d2360f099831a8',
             'gp-practises.parquet': 'b5a600f47443a5cc20c1322ed90d879380c8c9f909886bb4ed7a20203395d8f4',
+            'gp-staff.parquet': 'f2b1eccecab5f53b93d2a5ba1f86d6d9e3b20cd63443359788cb0c828871c949',
             'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
         })
 
@@ -114,6 +119,7 @@ class getData():
             'populationLSOA': self._sourcePopulation,
             'gpRegistration': self._sourceGPregistration,
             'gpPractise': self._sourceGPpractise,
+            'gpStaff': self._sourceGPstaff,
             'geoLSOA': self._sourceMap,
         })
 
@@ -362,6 +368,59 @@ class getData():
         logger.info(f'Writing GP practise lookup to {path}')
         gpPractises.to_parquet(path)
         return gpPractises
+
+
+    def _summariseStaff(self, x):
+        """ Compute aggregate staff stats per practise """
+        active = x['Left'].isna().any()
+        start = pd.Timestamp(x['Joined'].min())
+        end = pd.Timestamp(date.today()) if active else x['Left'].max()
+        totalYears = ((end - start).days / 365.25)
+
+        currentStaff = x['Current'].sum()
+        leftStaff = (x['Left'] < end).sum()
+
+        meanStaff = (x['Left'] - x['Joined']).dt.days.sum() / (end - start).days
+        turnOver = ((leftStaff / meanStaff) / totalYears) * 100
+
+        return pd.Series([currentStaff, leftStaff, meanStaff, turnOver])
+
+
+    def _sourceGPstaff(self):
+        url = 'https://files.digital.nhs.uk/assets/ods/current/epracmem.zip'
+        logger.info(f'Downloading GP staff lookup from {url}')
+        path = self._getSourcePath('gpStaff')
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.zip')
+            with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
+                zipRef.extractall(f'{tmp}/')
+            dtype = ({
+                'PractionerCode'  : str,
+                'OrganisationCode': str,
+                'Joined'          : str,
+                'Left'            : str,
+            })
+            cols = [0, 1, 3, 4]
+            gpStaff = pd.read_csv(
+                f'{tmp}/epracmem.csv', usecols=cols,
+                names=dtype.keys(), dtype=dtype, sep=',')
+        gpStaff['Joined'] = pd.to_datetime(gpStaff['Joined'], format="%Y/%m/%d")
+        gpStaff['Left'] = pd.to_datetime(gpStaff['Left'], format="%Y/%m/%d")
+        gpStaff['Current'] = gpStaff['Left'].isna()
+        gpStaff['Left'] = gpStaff['Left'].apply(
+            lambda x: pd.to_datetime(date.today()) if pd.isnull(x) else x)
+        names = ({
+            0: 'currentStaff',
+            1: 'departedStaff',
+            2: 'meanStaff',
+            3: 'annualStaffTurnover'
+        })
+        gpStaff = (
+            gpStaff.groupby('OrganisationCode').apply(self._summariseStaff)
+            .rename(names, axis=1))
+        logger.info(f'Writing GP staff stats to {path}')
+        gpStaff.to_parquet(path)
+        return gpStaff
 
 
     def _sourceMap(self):

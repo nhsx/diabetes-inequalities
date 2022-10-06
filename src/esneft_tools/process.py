@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 
+import sys
 import logging
-import osmnx as ox
 import numpy as np
 import pandas as pd
 import networkx as nx
 from collections import defaultdict
 
+
 logger = logging.getLogger(__name__)
+
+
+try:
+    import osmnx as ox
+except ModuleNotFoundError:
+    logger.error('OSMNX not found - some features are unavailable.')
 
 
 def _weightedMean(x, cols, w='Patient'):
@@ -26,8 +33,9 @@ def _parseIoDcols(imd: pd.DataFrame, iod_cols: list = None):
     return iod_cols
 
 
-def getGPsummary(gpRegistration, gpPractise, postcodeLSOA, imdLSOA,
-                esneftOSM, iod_cols: list = None, **kwargs):
+def getGPsummary(gpRegistration, gpPractise, gpStaff,
+                postcodeLSOA, imdLSOA, esneftOSM,
+                iod_cols: list = None, **kwargs):
     """ Compute mean IoD per GP practise weighted by patient population """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     summary = (pd
@@ -37,13 +45,13 @@ def getGPsummary(gpRegistration, gpPractise, postcodeLSOA, imdLSOA,
         .apply(_weightedMean, iod_cols))
     summary['Patients'] = (
         gpRegistration.groupby('OrganisationCode')['Patient'].sum())
-    summary = pd.concat([summary, gpPractise], axis=1)
+    summary = pd.concat([summary, gpPractise, gpStaff], axis=1)
     summary = pd.merge(
         summary, postcodeLSOA[['Lat', 'Long']], left_on='PCDS',
         right_index=True, how='left')
     summary['ESNEFT'] = summary['PCDS'].isin(
         postcodeLSOA.loc[postcodeLSOA['ESNEFT']].index)
-    if esneftOSM is not None:
+    if (esneftOSM is not None) and ('osmnx' in sys.modules):
         valid = summary[['Lat', 'Long']].notna().all(axis=1)
         summary.loc[valid, 'Node'] = ox.distance.nearest_nodes(
             esneftOSM, summary.loc[valid, 'Long'], summary.loc[valid, 'Lat'])
