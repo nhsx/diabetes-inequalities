@@ -40,7 +40,7 @@ class getData():
             'populationLSOA': 'population-lsoa.parquet',
             'areaLSOA': 'land-area-lsoa.parquet',
             'gpRegistration': 'gp-registrations.parquet',
-            'gpPractise': 'gp-practises.parquet',
+            'gpPractice': 'gp-practices.parquet',
             'gpStaff': 'gp-staff.parquet',
             'esneftLSOA': 'lsoa-esneft.json',
             'geoLSOA': 'lsoa-map-esneft.geojson',
@@ -62,7 +62,7 @@ class getData():
             'population-lsoa.parquet': '4958ab685cd78ded47ecba494a9e1130ae7a2758bc8206cbeb6af3b5466f801a',
             'land-area-lsoa.parquet': '7e15440b842b5502e508a2a4a49e51f6aa328a0b80d885710015b16795c2f676',
             'gp-registrations.parquet': 'b039285e697264315beb13d8922a605bdb30fe668d598d4ce9d2360f099831a8',
-            'gp-practises.parquet': 'b5a600f47443a5cc20c1322ed90d879380c8c9f909886bb4ed7a20203395d8f4',
+            'gp-practices.parquet': 'b5a600f47443a5cc20c1322ed90d879380c8c9f909886bb4ed7a20203395d8f4',
             'gp-staff.parquet': 'f2b1eccecab5f53b93d2a5ba1f86d6d9e3b20cd63443359788cb0c828871c949',
             'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
         })
@@ -121,7 +121,7 @@ class getData():
             'populationLSOA': self._sourcePopulation,
             'areaLSOA': self._sourceArea,
             'gpRegistration': self._sourceGPregistration,
-            'gpPractise': self._sourceGPpractise,
+            'gpPractice': self._sourceGPpractice,
             'gpStaff': self._sourceGPstaff,
             'geoLSOA': self._sourceMap,
         })
@@ -340,10 +340,10 @@ class getData():
         return gpRegistration
 
 
-    def _sourceGPpractise(self):
+    def _sourceGPpractice(self):
         url = 'https://files.digital.nhs.uk/assets/ods/current/epraccur.zip'
-        logger.info(f'Downloading GP practise lookup from {url}')
-        path = self._getSourcePath('gpPractise')
+        logger.info(f'Downloading GP practice lookup from {url}')
+        path = self._getSourcePath('gpPractice')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
@@ -358,7 +358,7 @@ class getData():
                 'PrescribingSetting': int
             })
             cols = [0, 1, 9, 10, 11, 12, 25]
-            gpPractises = pd.read_csv(
+            gpPractices = pd.read_csv(
                 f'{tmp}//epraccur.csv', usecols=cols, names=dtype.keys(),
                 dtype=dtype, sep=',', encoding='latin-1')
         statusMap = ({
@@ -378,22 +378,22 @@ class getData():
             20: 'Court', 21: 'Police Custody', 22: 'Sexual Assault Referrral Centre',
             24: 'Other - Justice Estate', 25: 'Prison'
         })
-        gpPractises['OpenDate'] = (
-            pd.to_datetime(gpPractises['OpenDate'], format="%Y/%m/%d"))
-        gpPractises['CloseDate'] = (
-            pd.to_datetime(gpPractises['CloseDate'], format="%Y/%m/%d"))
+        gpPractices['OpenDate'] = (
+            pd.to_datetime(gpPractices['OpenDate'], format="%Y/%m/%d"))
+        gpPractices['CloseDate'] = (
+            pd.to_datetime(gpPractices['CloseDate'], format="%Y/%m/%d"))
 
-        gpPractises['Status'] = gpPractises['Status'].replace(statusMap)
-        gpPractises['PrescribingSetting'] = (
-            gpPractises['PrescribingSetting'].replace(prescribingSetting))
-        gpPractises = gpPractises.set_index('OrganisationCode')
-        logger.info(f'Writing GP practise lookup to {path}')
-        gpPractises.to_parquet(path)
-        return gpPractises
+        gpPractices['Status'] = gpPractices['Status'].replace(statusMap)
+        gpPractices['PrescribingSetting'] = (
+            gpPractices['PrescribingSetting'].replace(prescribingSetting))
+        gpPractices = gpPractices.set_index('OrganisationCode')
+        logger.info(f'Writing GP practice lookup to {path}')
+        gpPractices.to_parquet(path)
+        return gpPractices
 
 
     def _summariseStaff(self, x):
-        """ Compute aggregate staff stats per practise """
+        """ Compute aggregate staff stats per practice """
         active = x['Left'].isna().any()
         start = pd.Timestamp(x['Joined'].min())
         end = pd.Timestamp(date.today()) if active else x['Left'].max()

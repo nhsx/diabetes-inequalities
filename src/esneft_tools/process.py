@@ -33,10 +33,10 @@ def _parseIoDcols(imd: pd.DataFrame, iod_cols: list = None):
     return iod_cols
 
 
-def getGPsummary(gpRegistration, gpPractise, gpStaff,
+def getGPsummary(gpRegistration, gpPractice, gpStaff,
                 postcodeLSOA, imdLSOA, esneftOSM,
                 iod_cols: list = None, **kwargs):
-    """ Compute mean IoD per GP practise weighted by patient population """
+    """ Compute mean IoD per GP practice weighted by patient population """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     summary = (pd
         .merge(gpRegistration, imdLSOA[iod_cols],
@@ -45,10 +45,11 @@ def getGPsummary(gpRegistration, gpPractise, gpStaff,
         .apply(_weightedMean, iod_cols))
     summary['Patients'] = (
         gpRegistration.groupby('OrganisationCode')['Patient'].sum())
-    summary = pd.concat([summary, gpPractise, gpStaff], axis=1)
+    summary = pd.concat([summary, gpPractice, gpStaff], axis=1)
     summary = pd.merge(
         summary, postcodeLSOA[['Lat', 'Long']], left_on='PCDS',
         right_index=True, how='left')
+    summary['patientPerGP'] = summary['Patients'] / summary['meanStaff']
     summary['ESNEFT'] = summary['PCDS'].isin(
         postcodeLSOA.loc[postcodeLSOA['ESNEFT']].index)
     if (esneftOSM is not None) and ('osmnx' in sys.modules):
@@ -60,7 +61,8 @@ def getGPsummary(gpRegistration, gpPractise, gpStaff,
 
 
 def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
-                   areaLSOA, iod_cols: list = None, q:int = 5, **kwargs):
+                   areaLSOA, esneftLSOA, iod_cols: list = None,
+                   q: int = 5, **kwargs):
     """ Return summary statistics per LSOA """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     populationLSOA = (
@@ -79,6 +81,8 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
     for col in iod_cols:
         summary[f'{col} (q{q})'] = pd.qcut(
             summary[col], q=q, labels=list(range(1, q+1)))
+    summary['Density'] = summary['Population'] / summary['LandHectare']
+    summary['ESNEFT'] = summary.index.isin(esneftLSOA)
     return summary
 
 
