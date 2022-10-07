@@ -38,6 +38,7 @@ class getData():
             'postcodeLSOA': 'postcode-lsoa.parquet',
             'imdLSOA': 'imd-statistics.parquet',
             'populationLSOA': 'population-lsoa.parquet',
+            'areaLSOA': 'land-area-lsoa.parquet',
             'gpRegistration': 'gp-registrations.parquet',
             'gpPractise': 'gp-practises.parquet',
             'gpStaff': 'gp-staff.parquet',
@@ -59,6 +60,7 @@ class getData():
             'postcode-lsoa.parquet': '27ba443ae5b83b11f69b95440121045968804ab3253269c9bbccc9c4381a86d8',
             'imd-statistics.parquet': '4a20c6a394124205a767e2f420efb7604d7a9b45ce307cc3dd39fc6df7fc62ff',
             'population-lsoa.parquet': '4958ab685cd78ded47ecba494a9e1130ae7a2758bc8206cbeb6af3b5466f801a',
+            'land-area-lsoa.parquet': '7e15440b842b5502e508a2a4a49e51f6aa328a0b80d885710015b16795c2f676',
             'gp-registrations.parquet': 'b039285e697264315beb13d8922a605bdb30fe668d598d4ce9d2360f099831a8',
             'gp-practises.parquet': 'b5a600f47443a5cc20c1322ed90d879380c8c9f909886bb4ed7a20203395d8f4',
             'gp-staff.parquet': 'f2b1eccecab5f53b93d2a5ba1f86d6d9e3b20cd63443359788cb0c828871c949',
@@ -117,6 +119,7 @@ class getData():
             'postcodeLSOA': self._sourceLSOA,
             'imdLSOA': self._sourceIMD,
             'populationLSOA': self._sourcePopulation,
+            'areaLSOA': self._sourceArea,
             'gpRegistration': self._sourceGPregistration,
             'gpPractise': self._sourceGPpractise,
             'gpStaff': self._sourceGPstaff,
@@ -293,6 +296,25 @@ class getData():
         )
         pop['Sex'] = sex
         return pop
+
+
+    def _sourceArea(self):
+        url = ('https://www.arcgis.com/sharing/rest/content/items/'
+               '5a94044d113a4bd5bd895975d6612b05/data')
+        logger.info(f'Downloading LSOA land area lookup from {url}')
+        path = self._getSourcePath('areaLSOA')
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.zip')
+            with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
+                zipRef.extractall(f'{tmp}/')
+            areaLSOA = (
+                pd.read_excel(f'{tmp}/SAM_LSOA_DEC_2011_EW.xlsx')
+                .set_index('LSOA11CD')
+                .rename({'AREALHECT': 'LandHectare'}, axis=1)['LandHectare']
+                .to_frame()
+            )
+        areaLSOA.to_parquet(path)
+        return areaLSOA
 
 
     def _sourceGPregistration(self):

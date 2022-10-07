@@ -39,6 +39,7 @@ setup(
         'pandas',
         'pyarrow',
         'seaborn',
+        'kaleido',
         'geopandas',
         'matplotlib'
     ],

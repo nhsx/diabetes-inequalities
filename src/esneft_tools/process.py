@@ -60,7 +60,7 @@ def getGPsummary(gpRegistration, gpPractise, gpStaff,
 
 
 def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
-                   iod_cols: list = None, q:int = 5, **kwargs):
+                   areaLSOA, iod_cols: list = None, q:int = 5, **kwargs):
     """ Return summary statistics per LSOA """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     populationLSOA = (
@@ -74,7 +74,7 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
         postcodeLSOA.reset_index(drop=True)
         .set_index('LSOA11CD')['LSOA11NM'].drop_duplicates())
     summary = pd.concat([
-        lsoaName, populationLSOA,
+        lsoaName, populationLSOA, areaLSOA,
         gpRegistrationByLSOA, imdLSOA[iod_cols]], axis=1)
     for col in iod_cols:
         summary[f'{col} (q{q})'] = pd.qcut(
