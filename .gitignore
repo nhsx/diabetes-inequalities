@@ -6,8 +6,10 @@
 !*.md
 !*.py
 !*.sh
+!*png
 
 # ...even if they are in subdirectories
 !*/
 
 .ipynb_checkpoints
+package_testing/

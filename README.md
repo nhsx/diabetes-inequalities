@@ -8,9 +8,14 @@
   * [Setup](#setup)
   * [Retrieve Data](#retrieve-public-data)
     * [Download](#download)
-    * [Aggregate](#aggregate)
-      * [Practice Level](#practice-level)
-      * [LSOA Level](#lsoa-level)
+    * [Process](#process)
+      * [Aggregate By Practice Level](#aggregate-by-practice-level)
+      * [Aggregate By LSOA Level](#aggregate-by-lsoa-Level)
+      * [Compute Travel Time](#compute-travel-time)
+  * [Visualise](#visualise)
+    * [Practice Map](#practice-map)
+    * [LSOA Map](#lsoa-map)
+    * [Healthcare Accessibility](#healthcare-accessibility)
   * [License](#license)
   * [Contact](#contact)
 
@@ -37,9 +42,20 @@ setVerbosity(logging.INFO)
 ### Download
 Each of the `esneft_tools.download.getData().fromHost()` functions retrieve a static copy of a particular data set from GitHub.
 A local copy of these tables is saved to `./.data-cache/` by default.
+Each can be obtained individually but it is recommended to retrieve all data, as below.
+
+```python
+from esneft_tools import download
+
+# Instantiate data download class.
+getData = download.getData(cache='./.data-cache')
+
+# Retrieve all data as dictionary (recommended)
+data = dataDownloader.fromHost('all')
+```
 
   * `all` **(default)**
-    * Retrieve all of the below data in dictionary format (**reccomended**).
+    * Retrieve all of the below data in dictionary format (**recommended**).
   *  `postcodeLSOA`
      * Postcode -> LSOA (2011) lookup Table from [ArcGIS](https://hub.arcgis.com/datasets/6a46e14a6c2441e3ab08c7b277335558/about)
   *  `imdLSOA`
@@ -61,31 +77,10 @@ A local copy of these tables is saved to `./.data-cache/` by default.
   * `esneftOSM`
     * OpenStreetMap (OSM) data for ESNEFT area from [Geofabrik](https://download.geofabrik.de/europe/great-britain/england.html)
 
-```python
-from esneft_tools import download
 
-# Instantiate data download class.
-getData = download.getData(cache='./.data-cache')
+### Processing
 
-# Retrieve all data as dictionary (recommended)
-data = dataDownloader.fromHost('all')
-
-# Alternatively, retrieve  data sets individually
-postcodeLSOA = dataDownloader.fromHost('postcodeLSOA')
-imdLSOA = dataDownloader.fromHost('imdLSOA')
-populationLSOA = dataDownloader.fromHost('populationLSOA')
-areaLSOA = dataDownloader.fromHost('areaLSOA')
-gpRegistration = dataDownloader.fromHost('gpRegistration')
-gpPractice = dataDownloader.fromHost('gpPractice')
-gpStaff = dataDownloader.fromHost('gpStaff')
-geoLSOA = dataDownloader.fromHost('geoLSOA')
-esneftLSOA = dataDownloader.fromHost('esneftLSOA')
-esneftOSM = dataDownloader.fromHost('esneftOSM')
-```
-
-### Aggregate
-
-#### Practice Level
+#### Aggregate by Practice Level
 The `getGPsummary` function aggregates the downloaded data to practice level statistics.
 
 ```python
@@ -112,7 +107,7 @@ GPsummary = process.getGPsummary(**data, iod_cols='IMD')
 | ESNEFT              | Boolean Flag of Practices within ESNEFT                   |
 | Node                | Closest OSM Map Node to Site                              |
 
-#### LSOA Level
+#### Aggregate by LSOA Level
 The `getLSOAsummary` function aggregates the downloaded data LSOA level statistics.
 
 ```python
@@ -133,9 +128,58 @@ LSOAsummary = process.getLSOAsummary(**data, iod_cols='IMD')
   | ESNEFT       | Boolean Flag of LSOAs within ESNEFT        |
 
 
-## Visualisation
-## License
+#### Compute Travel Time
+The `computeTravelDistance` function uses `OSMNX` to compute the minimum distance to the nearest healthcare service (e.g. GP practice) from any point in the ESNEFT region.
 
+```python
+activeGP = GPsummary.loc[
+      (GPsummary['Status'] == 'Active')
+    & (GPsummary['PrescribingSetting'] == 'GP Practice')
+].copy()
+
+distances = process.computeTravelDistance(data['esneftOSM'], activeGP, maxQuant=0.99)
+```
+
+| Field        | Description                                      |
+| ---          | ---                                              |
+| *Node*   | OSM Map Node                                         |
+| Distance     | Distances by Road (metres) to Nearest Service(s) |
+| SiteIDs      | Practise Service Code(s) of Nearest Services
+
+### Visualise
+
+### Practice Map
+
+```python
+fig = visualise.scatterGP(GPsummary[GPsummary['Status'] == 'Active'], minCount=250)
+fig.write_image('GP-locations.png')
+```
+
+![gp-loc](./README_files/GP-locations.png)
+ <br> *Map of Practice Distributions within ESNEFT (Plotly Interactive)*
+
+
+### LSOA Map
+
+```python
+fig = visualise.choroplethLSOA(LSOAsummary, data['geoLSOA'], colour='IMD')
+fig.write_image('LSOA-choropleth.png')
+```
+
+![gp-loc](./README_files/LSOA-choropleth.png)
+ <br> *Choropleth Map of LSOA Domains within ESNEFT coloured by IMD (Plotly Interactive)*
+
+### Healthcare Accessibility
+
+```python
+fig, ax = visualise.plotTravelTime(
+    data['esneftOSM'], distances, maxQuant=0.95, out='GP-accessibility.png')
+```
+
+![gp-loc](./README_files/GP-accessibility.png)
+ <br> *Heat map visualising distance to nearest GP Practice within ESNEFT*
+
+## License
 Distributed under the MIT License. _See [LICENSE](./LICENSE) for more information._
 
 ## Contact
