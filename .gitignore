@@ -6,7 +6,7 @@
 !*.md
 !*.py
 !*.sh
-!*png
+!README_files/*
 
 # ...even if they are in subdirectories
 !*/
