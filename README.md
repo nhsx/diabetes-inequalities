@@ -140,11 +140,11 @@ activeGP = GPsummary.loc[
 distances = process.computeTravelDistance(data['esneftOSM'], activeGP, maxQuant=0.99)
 ```
 
-| Field        | Description                                      |
-| ---          | ---                                              |
-| *Node*   | OSM Map Node                                         |
-| Distance     | Distances by Road (metres) to Nearest Service(s) |
-| SiteIDs      | Practise Service Code(s) of Nearest Services
+| Field    | Description                                      |
+| ---      | ---                                              |
+| *Node*   | OSM Map Node                                     |
+| Distance | Distances by Road (metres) to Nearest Service(s) |
+| SiteIDs  | Practise Service Code(s) of Nearest Services     |
 
 ### Visualise
 
