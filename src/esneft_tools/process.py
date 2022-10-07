@@ -49,7 +49,7 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
     summary = pd.merge(
         summary, postcodeLSOA[['Lat', 'Long']], left_on='PCDS',
         right_index=True, how='left')
-    summary['patientPerGP'] = summary['Patients'] / summary['meanStaff']
+    summary['patientPerGP'] = summary['Patient'] / summary['meanStaff']
     summary['ESNEFT'] = summary['PCDS'].isin(
         postcodeLSOA.loc[postcodeLSOA['ESNEFT']].index)
     if (esneftOSM is not None) and ('osmnx' in sys.modules):
