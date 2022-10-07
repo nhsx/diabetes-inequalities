@@ -101,7 +101,7 @@ def _checkInBounds(x, bounds):
     )
 
 
-def computeTravelTime(G, locations, step=500, maxQuant=0.95):
+def computeTravelDistance(G, locations, step=500, maxQuant=0.95):
     fullBounds = ox.graph_to_gdfs(G, edges=False).total_bounds
     inBounds = locations.apply(_checkInBounds, args=(fullBounds,), axis=1)
     locations = locations.loc[inBounds].copy()
