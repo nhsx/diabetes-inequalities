@@ -34,8 +34,8 @@ def _parseIoDcols(imd: pd.DataFrame, iod_cols: list = None):
 
 
 def getGPsummary(gpRegistration, gpPractice, gpStaff,
-                postcodeLSOA, imdLSOA, esneftOSM,
-                iod_cols: list = None, **kwargs):
+                 postcodeLSOA, imdLSOA, esneftOSM,
+                 iod_cols: list = None, **kwargs):
     """ Compute mean IoD per GP practice weighted by patient population """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     summary = (pd
@@ -43,7 +43,7 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
                left_on='LSOA11CD', right_index=True)
         .groupby(['OrganisationCode'])
         .apply(_weightedMean, iod_cols))
-    summary['Patients'] = (
+    summary['Patient'] = (
         gpRegistration.groupby('OrganisationCode')['Patient'].sum())
     summary = pd.concat([summary, gpPractice, gpStaff], axis=1)
     summary = pd.merge(
