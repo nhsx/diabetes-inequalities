@@ -88,7 +88,11 @@ class getData():
                 open_ = urlopen
             if path.endswith('.geojson'):
                 with open_(path) as geofile:
-                    data = json.load(geofile)
+                    if os.path.exists(out):
+                        data = geofile.read()
+                    else:
+                        data = geofile.read().decode('utf-8')
+                    data = json.loads(data)
                 if not os.path.exists(out):
                     with open(out, 'w') as fh:
                         json.dump(data, fh)
@@ -460,7 +464,7 @@ class getData():
             geodf = geodf.to_crs(epsg='4326')
 
             geodf.to_file(f'{tmp}/LSOA11-AOI-raw.geojson', driver='GeoJSON')
-            with open(f'{tmp}/LSOA11-AOI-raw.geojson') as geofile:
+            with open(f'{tmp}/LSOA11-AOI-raw.geojson', encoding='utf-8') as geofile:
                 geoLSOA11 = json.load(geofile)
 
             for i, feature in enumerate(geoLSOA11['features']):
