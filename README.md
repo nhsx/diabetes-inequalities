@@ -45,13 +45,11 @@ A local copy of these tables is saved to `./.data-cache/` by default.
 Each can be obtained individually but it is recommended to retrieve all data, as below.
 
 ```python
-from esneft_tools import download
-
 # Instantiate data download class.
 getData = download.getData(cache='./.data-cache')
 
 # Retrieve all data as dictionary (recommended)
-data = dataDownloader.fromHost('all')
+data = getData.fromHost('all')
 ```
 
   * `all` **(default)**
