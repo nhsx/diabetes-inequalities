@@ -91,7 +91,7 @@ class getData():
                     data = json.load(geofile)
                 if not os.path.exists(out):
                     with open(out, 'w') as fh:
-                        json.dump(geoLSOA11, fh)
+                        json.dump(data, fh)
             elif path.endswith('.parquet'):
                 data = pd.read_parquet(path)
                 if not os.path.exists(out):
