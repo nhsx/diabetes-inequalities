@@ -68,6 +68,8 @@ data = getData.fromHost('all')
     * GP Practice information from [NHS Digital](https://digital.nhs.uk/services/organisation-data-service/file-downloads/gp-and-gp-practice-related-data)
   * `gpStaff`
     * GPs by GP Practices from [NHS Digital](https://digital.nhs.uk/services/organisation-data-service/file-downloads/gp-and-gp-practice-related-data)
+  * `qofDM`
+    * Quality and Outcomes Framework, 2021-22 for Diabetes from [NHS Digital](https://digital.nhs.uk/data-and-information/publications/statistical/quality-and-outcomes-framework-achievement-prevalence-and-exceptions-data/2021-22)
   * `geoLSOA`
     * LSOA GeoJSON from [UK Data Service](https://statistics.ukdataservice.ac.uk/dataset/2011-census-geography-boundaries-lower-layer-super-output-areas-and-data-zones)
   * `esneftLSOA`
@@ -90,6 +92,8 @@ GPsummary = process.getGPsummary(**data, iod_cols='IMD')
 | *OrganisationCode*  | Practice Service Code                                     |
 | IMD                 | Mean Index of Multiple Deprivation of Registered Patients |
 | Patient             | Total Registered Patients                                 |
+| QOF-DM              | QOF achievement for Diabetes mellitus (max 76)            |
+| DM-prevalance       | Prevalence of Diabetes mellitus                           |
 | PCDS                | Postcode                                                  |
 | OpenDate            | Opening Date                                              |
 | CloseDate           | Closing Date                                              |
@@ -112,18 +116,19 @@ The `getLSOAsummary` function aggregates the downloaded data LSOA level statisti
 LSOAsummary = process.getLSOAsummary(**data, iod_cols='IMD')
 ```
 
-  | Field        | Description                                |
-  | ---          | ---                                        |
-  | *LSOA11CD*   | LSOA (2011) Code                           |
-  | LSOA11NM     | LSOA (2011) Name                           |
-  | Age (median) | Median Age of Population                   |
-  | Population   | Population Estimate (2011 Census)          |
-  | LandHectare  | Land Area (Hectares)                       |
-  | Patient      | Total Registered GP Patients               |
-  | IMD          | Index of Multiple Deprivation              |
-  | IMD (q5)     | Index of Multiple Deprivation (quintiles)  |
-  | Density      | Population Density                         |
-  | ESNEFT       | Boolean Flag of LSOAs within ESNEFT        |
+| Field         | Description                               |
+| ---           | ---                                       |
+| *LSOA11CD*    | LSOA (2011) Code                          |
+| LSOA11NM      | LSOA (2011) Name                          |
+| Age (median)  | Median Age of Population                  |
+| Population    | Population Estimate (2011 Census)         |
+| LandHectare   | Land Area (Hectares)                      |
+| Patient       | Total Registered GP Patients              |
+| IMD           | Index of Multiple Deprivation             |
+| IMD (q5)      | Index of Multiple Deprivation (quintiles) |
+| DM-prevalance | Prevalence of Diabetes mellitus           |
+| Density       | Population Density                        |
+| ESNEFT        | Boolean Flag of LSOAs within ESNEFT       |
 
 
 #### Compute Travel Time

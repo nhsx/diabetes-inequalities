@@ -47,11 +47,11 @@ def scatterGP(GPsummary, minCount=1):
     )
     GPsummary['IMD'] = GPsummary['IMD'].apply(lambda x: f'{x:.3f}')
     GPsummary['OpenDate'] = GPsummary['OpenDate'].astype(str)
-    GPsummary['Patients'] = GPsummary['Patients'].fillna(-1).astype(int)
+    GPsummary['Patient'] = GPsummary['Patient'].fillna(-1).astype(int)
     fig = px.scatter_mapbox(
         GPsummary, lat='Lat', lon='Long',
         hover_name='OrganisationName',
-        hover_data=['PCDS', 'Status', 'IMD', 'Patients', 'OpenDate'],
+        hover_data=['PCDS', 'Status', 'IMD', 'Patient', 'OpenDate'],
         color='PrescribingSetting',
         color_discrete_sequence=px.colors.qualitative.Plotly,
         mapbox_style="carto-positron",

@@ -42,6 +42,7 @@ class getData():
             'gpRegistration': 'gp-registrations.parquet',
             'gpPractice': 'gp-practices.parquet',
             'gpStaff': 'gp-staff.parquet',
+            'qofDM': 'qof-dm.parquet',
             'esneftLSOA': 'lsoa-esneft.json',
             'geoLSOA': 'lsoa-map-esneft.geojson',
             'esneftOSM': 'esneft-highways.osm.gz'
@@ -64,6 +65,7 @@ class getData():
             'gp-registrations.parquet': 'b039285e697264315beb13d8922a605bdb30fe668d598d4ce9d2360f099831a8',
             'gp-practices.parquet': 'b5a600f47443a5cc20c1322ed90d879380c8c9f909886bb4ed7a20203395d8f4',
             'gp-staff.parquet': 'f2b1eccecab5f53b93d2a5ba1f86d6d9e3b20cd63443359788cb0c828871c949',
+            'qof-dm.parquet': 'c6cfa8869c5ad4110fd08175dc9b2c82a4325703c322fe5b48295cf8ebe7d5a8',
             'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
         })
 
@@ -127,6 +129,7 @@ class getData():
             'gpRegistration': self._sourceGPregistration,
             'gpPractice': self._sourceGPpractice,
             'gpStaff': self._sourceGPstaff,
+            'qofDM': self._sourceQOF,
             'geoLSOA': self._sourceMap,
         })
 
@@ -167,7 +170,6 @@ class getData():
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
                 zipRef.extractall(f'{tmp}/')
-
             dtype = ({
                 'PCDS'    : str, # PCDS - Postcode
                 'LSOA11CD': str, # LSOA Code (Census 2011)
@@ -447,6 +449,30 @@ class getData():
         logger.info(f'Writing GP staff stats to {path}')
         gpStaff.to_parquet(path)
         return gpStaff
+
+
+    def _sourceQOF(self):
+        url = ('https://files.digital.nhs.uk/8A/57C8D5/'
+               'qof-2122-prev-ach-pca-hd-prac.xlsx')
+        logger.info(f'Downloading QOF 2020/2021 DM data from {url}')
+        path = self._getSourcePath('qofDM')
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.xlsx')
+            names = ({
+                'OrganisationCode': str,
+                'Registered': int,
+                'Diabetes': int,
+                'QOF-DM': float
+            })
+            cols = [5, 10, 12, 17]
+            qofDM = pd.read_excel(
+                'data.xlsx', names=names.keys(), dtype=names,
+                usecols=cols, skiprows=11, nrows=6470,
+                sheet_name='DM').set_index('OrganisationCode')
+        qofDM['DM-prevalance'] = qofDM['Diabetes'] / qofDM['Registered']
+        qofDM = qofDM.drop(['Registered', 'Diabetes'], axis=1)
+        logger.info(f'Writing QOF data to {path}')
+        qofDM.to_parquet(path)
 
 
     def _sourceMap(self):

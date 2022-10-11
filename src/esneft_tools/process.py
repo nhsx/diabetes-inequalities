@@ -35,7 +35,7 @@ def _parseIoDcols(imd: pd.DataFrame, iod_cols: list = None):
 
 def getGPsummary(gpRegistration, gpPractice, gpStaff,
                  postcodeLSOA, imdLSOA, esneftOSM,
-                 iod_cols: list = None, **kwargs):
+                 qofDM, iod_cols: list = None, **kwargs):
     """ Compute mean IoD per GP practice weighted by patient population """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     summary = (pd
@@ -45,7 +45,7 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
         .apply(_weightedMean, iod_cols))
     summary['Patient'] = (
         gpRegistration.groupby('OrganisationCode')['Patient'].sum())
-    summary = pd.concat([summary, gpPractice, gpStaff], axis=1)
+    summary = pd.concat([summary, qofDM, gpPractice, gpStaff], axis=1)
     summary = pd.merge(
         summary, postcodeLSOA[['Lat', 'Long']], left_on='PCDS',
         right_index=True, how='left')
@@ -61,7 +61,7 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
 
 
 def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
-                   areaLSOA, esneftLSOA, iod_cols: list = None,
+                   areaLSOA, esneftLSOA, qofDM, iod_cols: list = None,
                    q: int = 5, **kwargs):
     """ Return summary statistics per LSOA """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
@@ -81,9 +81,21 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
     for col in iod_cols:
         summary[f'{col} (q{q})'] = pd.qcut(
             summary[col], q=q, labels=list(range(1, q+1)))
+    summary['DM-prevalance'] = _getLSOAprevalence(gpRegistration, qofDM)
     summary['Density'] = summary['Population'] / summary['LandHectare']
     summary['ESNEFT'] = summary.index.isin(esneftLSOA)
     return summary
+
+
+def _getLSOAprevalence(gpRegistration, qofDM):
+    """ Compute LSOA prevalence by weighted mean across GP """
+    gpTmp = pd.merge(
+        gpRegistration, qofDM,
+        left_on='OrganisationCode', right_index=True)
+    prevalance = (
+        gpTmp.groupby('LSOA11CD')
+        .apply(lambda x: np.average(x['DM-prevalance'], weights=x['Patient'])))
+    return prevalance
 
 
 def _summarisePopulation(x):
