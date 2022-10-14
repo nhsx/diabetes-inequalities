@@ -20,8 +20,9 @@ import logging
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from scipy.stats import spearmanr
 import matplotlib.pyplot as plt
-from esneft_tools.utils import setVerbosity
+from esneft_tools.utils import setVerbosity, formatP
 from esneft_tools import download, process, visualise
 
 setVerbosity(logging.INFO)
@@ -42,7 +43,22 @@ GPsummary = process.getGPsummary(**data, iod_cols='IMD')
 ```python
 fig, ax = plt.subplots()
 sns.kdeplot(data=GPsummary, x='IMD', y='DM-prevalance', fill=True, ax=ax)
-ax.set_ylim(0, 0.2)
+sns.regplot(data=GPsummary, x='IMD', y='DM-prevalance', order=2, scatter=False, ax=ax)
+ax.set_ylim(0, 0.15)
+fig.tight_layout()
+```
+
+```python
+metrics = ({'DM019-BP': 'BP < 140/80 mmHg', 'DM020-HbA1c': 'IFCC-HbA1c < 58 mmol/mol'})
+fig, axes = plt.subplots(1, 2, figsize=(12, 7), sharex=True, sharey=True)
+axes = axes.flatten()
+for i, (metric, label) in enumerate(metrics.items()):
+    rho, p = spearmanr(GPsummary[['IMD', metric]].dropna())
+    sns.kdeplot(data=GPsummary, x='IMD', y=metric, fill=True, ax=axes[i])
+    sns.regplot(data=GPsummary, x='IMD', y=metric, scatter=False, ax=axes[i])
+    axes[i].set_title(f"{label} (Rho  = {rho:.2f}, p {formatP(p)})", loc='left')
+    axes[i].set_ylim(0.2, 0.9)
+axes[0].set_ylabel('Proportion of patients meeting treatment target')
 fig.tight_layout()
 ```
 
@@ -53,11 +69,20 @@ fig.write_image('GP-locations.png')
 ```
 
 ```python
-LSOAsummary = process.getLSOAsummary(**data, iod_cols='IMD')#.dropna()
+bins = 5
+quantile = True
+name = f'q{bins}' if quantile else f'i{bins}'
+LSOAsummary = process.getLSOAsummary(**data, iod_cols='IMD', bins=bins, quantile=True)#.dropna()
 ```
 
 ```python
-sns.kdeplot(data=LSOAsummary.dropna(), x='IMD', y='DM-prevalance', fill=True)
+sns.histplot(data=LSOAsummary.dropna(), x='IMD', hue=f'IMD ({name})', stat='probability')
+```
+
+```python
+sns.lmplot(
+    data=LSOAsummary.dropna(), x='Age (median)', 
+    y='DM-prevalance', hue=f'IMD ({name})', scatter=False)
 ```
 
 ```python
