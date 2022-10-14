@@ -66,7 +66,7 @@ class getData():
             'gp-registrations.parquet': 'b039285e697264315beb13d8922a605bdb30fe668d598d4ce9d2360f099831a8',
             'gp-practices.parquet': 'b5a600f47443a5cc20c1322ed90d879380c8c9f909886bb4ed7a20203395d8f4',
             'gp-staff.parquet': 'f2b1eccecab5f53b93d2a5ba1f86d6d9e3b20cd63443359788cb0c828871c949',
-            'qof-dm.parquet': 'c6cfa8869c5ad4110fd08175dc9b2c82a4325703c322fe5b48295cf8ebe7d5a8',
+            'qof-dm.parquet': '16b78300b1aebecc2725a02ee9e90513971c5bcc83c283235add8a5384e4326e',
             'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
         })
 
@@ -467,17 +467,26 @@ class getData():
                 'OrganisationCode': str,
                 'Registered': int,
                 'Diabetes': int,
-                'QOF-DM': float
+                'QOF-DM': float,
+                'DM019-num': int,
+                'DM019-den': int,
+                'DM020-num': int,
+                'DM020-den': int,
             })
-            cols = [5, 10, 12, 17]
+            cols = [5, 10, 12, 17, 38, 43, 46, 51, 54, 59, 62, 67]
             qofDM = pd.read_excel(
-                'data.xlsx', names=names.keys(), dtype=names,
+                f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
                 usecols=cols, skiprows=11, nrows=6470,
                 sheet_name='DM').set_index('OrganisationCode')
         qofDM['DM-prevalance'] = qofDM['Diabetes'] / qofDM['Registered']
-        qofDM = qofDM.drop(['Registered', 'Diabetes'], axis=1)
+        qofDM['DM019-BP'] = qofDM['DM019-num'] / qofDM['DM019-den']
+        qofDM['DM020-HbA1c'] = qofDM['DM020-num'] / qofDM['DM020-den']
+        qofDM = qofDM.drop(
+            ['Registered', 'Diabetes', 'DM019-num',
+             'DM019-den', 'DM020-num', 'DM020-den'], axis=1)
         logger.info(f'Writing QOF data to {path}')
         qofDM.to_parquet(path)
+        return qofDM
 
 
     def _sourceMap(self):
