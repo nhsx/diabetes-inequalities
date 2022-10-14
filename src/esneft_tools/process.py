@@ -56,7 +56,7 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
         valid = summary[['Lat', 'Long']].notna().all(axis=1)
         summary.loc[valid, 'Node'] = ox.distance.nearest_nodes(
             esneftOSM, summary.loc[valid, 'Long'], summary.loc[valid, 'Lat'])
-        summary['Node'] = summary['Node'].fillna(-1).astype(int)
+        summary['Node'] = summary['Node'].fillna('')
     return summary
 
 

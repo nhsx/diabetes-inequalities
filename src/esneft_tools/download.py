@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import osmnx as ox
+    import networkx as nx
 except ModuleNotFoundError:
     logger.error('OSMNX not found - some features are unavailable.')
 
@@ -58,7 +59,7 @@ class getData():
     def expectedHashes(self):
         return ({
             'lsoa-name.parquet': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
-            'postcode-lsoa.parquet': '27ba443ae5b83b11f69b95440121045968804ab3253269c9bbccc9c4381a86d8',
+            'postcode-lsoa.parquet': '74dbde45b3689d5f120c12a29e72568c2eec1d2cd6b708d4ae7f36affddc6a5a',
             'imd-statistics.parquet': '4a20c6a394124205a767e2f420efb7604d7a9b45ce307cc3dd39fc6df7fc62ff',
             'population-lsoa.parquet': '4958ab685cd78ded47ecba494a9e1130ae7a2758bc8206cbeb6af3b5466f801a',
             'land-area-lsoa.parquet': '7e15440b842b5502e508a2a4a49e51f6aa328a0b80d885710015b16795c2f676',
@@ -116,6 +117,11 @@ class getData():
                             for line in fh:
                                 oh.write(line)
                 data = ox.graph.graph_from_xml(out, simplify=True)
+                # Get largest connected to prevent no pathing
+                data = ox.utils_graph.get_largest_component(data)
+                # Convert node names to string to prevent integer overflow
+                relabel = {node: str(node) for node in data.nodes}
+                data = nx.relabel_nodes(data, relabel)
             return data
 
 
@@ -194,7 +200,7 @@ class getData():
             ox.distance.nearest_nodes(G,
                 postcodeLSOA.loc[valid, 'Long'],
                 postcodeLSOA.loc[valid, 'Lat']))
-        postcodeLSOA['Node'] = postcodeLSOA['Node'].fillna(-1).astype(int)
+        postcodeLSOA['Node'] = postcodeLSOA['Node'].fillna('')
         logger.info(f'Writing Postcode: LSOA map to {path}')
         postcodeLSOA.to_parquet(path)
         return postcodeLSOA
