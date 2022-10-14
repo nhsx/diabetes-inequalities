@@ -61,7 +61,7 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
 
 def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
                    areaLSOA, esneftLSOA, qofDM, iod_cols: list = None,
-                   q: int = 5, **kwargs):
+                   bins: int = 5, quantile: bool = True, **kwargs):
     """ Return summary statistics per LSOA """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     populationLSOA = (
@@ -77,9 +77,11 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
     summary = pd.concat([
         lsoaName, populationLSOA, areaLSOA,
         gpRegistrationByLSOA, imdLSOA[iod_cols]], axis=1)
+    cutter = pd.qcut if quantile else pd.cut
+    name = 'q' if quantile else 'i'
     for col in iod_cols:
-        summary[f'{col} (q{q})'] = pd.qcut(
-            summary[col], q=q, labels=list(range(1, q+1)))
+        summary[f'{col} ({name}{bins})'] = cutter(
+            summary[col], bins, labels=list(range(1, bins+1)))
     summary['DM-prevalance'] = _getLSOAprevalence(gpRegistration, qofDM)
     summary['Density'] = summary['Population'] / summary['LandHectare']
     summary['ESNEFT'] = summary.index.isin(esneftLSOA)
