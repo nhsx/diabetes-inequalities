@@ -59,7 +59,7 @@ class getData():
     def expectedHashes(self):
         return ({
             'lsoa-name.parquet': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
-            'postcode-lsoa.parquet': '74dbde45b3689d5f120c12a29e72568c2eec1d2cd6b708d4ae7f36affddc6a5a',
+            'postcode-lsoa.parquet': '2ef1cb6627eef638ba5e8f2c10ed93e1d3c31e7e89dc15d6ffc7937b31a886de',
             'imd-statistics.parquet': '4a20c6a394124205a767e2f420efb7604d7a9b45ce307cc3dd39fc6df7fc62ff',
             'population-lsoa.parquet': '4958ab685cd78ded47ecba494a9e1130ae7a2758bc8206cbeb6af3b5466f801a',
             'land-area-lsoa.parquet': '7e15440b842b5502e508a2a4a49e51f6aa328a0b80d885710015b16795c2f676',
@@ -200,7 +200,6 @@ class getData():
             ox.distance.nearest_nodes(G,
                 postcodeLSOA.loc[valid, 'Long'],
                 postcodeLSOA.loc[valid, 'Lat']))
-        postcodeLSOA['Node'] = postcodeLSOA['Node'].fillna('')
         logger.info(f'Writing Postcode: LSOA map to {path}')
         postcodeLSOA.to_parquet(path)
         return postcodeLSOA
