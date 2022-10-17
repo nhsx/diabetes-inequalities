@@ -66,7 +66,7 @@ class getData():
             'gp-registrations.parquet': 'b039285e697264315beb13d8922a605bdb30fe668d598d4ce9d2360f099831a8',
             'gp-practices.parquet': 'b5a600f47443a5cc20c1322ed90d879380c8c9f909886bb4ed7a20203395d8f4',
             'gp-staff.parquet': 'f2b1eccecab5f53b93d2a5ba1f86d6d9e3b20cd63443359788cb0c828871c949',
-            'qof-dm.parquet': '16b78300b1aebecc2725a02ee9e90513971c5bcc83c283235add8a5384e4326e',
+            'qof-dm.parquet': 'a2c0e619ac8911cfbbc342121a001c24673c0ad763d15b154d9eb4c4dc4b3b9e',
             'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
         })
 
@@ -473,7 +473,7 @@ class getData():
                 'DM020-num': int,
                 'DM020-den': int,
             })
-            cols = [5, 10, 12, 17, 38, 43, 46, 51, 54, 59, 62, 67]
+            cols = [5, 10, 12, 17, 54, 59, 62, 67]
             qofDM = pd.read_excel(
                 f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
                 usecols=cols, skiprows=11, nrows=6470,
