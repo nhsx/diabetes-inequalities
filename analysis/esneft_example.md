@@ -80,23 +80,32 @@ sns.histplot(data=LSOAsummary.dropna(), x='IMD', hue=f'IMD ({name})', stat='prob
 ```
 
 ```python
-sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', hue=f'IMD ({name})')
-```
-
-```python
-df = LSOAsummary[['Age (median)', f'IMD ({name})', 'DM-prevalance']].dropna().copy()
+df = LSOAsummary[['Age (median)', f'IMD ({name})', 'DM-prevalance', 'Population']].dropna().copy()
 df['Age'] = pd.qcut(df['Age (median)'], 10)
-df = (
-    df.groupby(['Age', f'IMD ({name})'])['DM-prevalance']
-    .median()
+table = (
+    df.groupby(['Age', f'IMD ({name})'])
+    .apply(lambda x: (np.average(x['DM-prevalance'], weights=x['Population'])) * 100_000)
     .reset_index()
     .pivot(index='Age', columns=f'IMD ({name})')
     .droplevel(0, axis=1)
 )
 fig, ax = plt.subplots()
-sns.heatmap(df, cmap='viridis', ax=ax)
+sns.heatmap(table, cmap='viridis', ax=ax)
 ax.set_title('Diabetes Prevalance by Age and IMD', loc='left')
 fig.tight_layout()
+```
+
+```python
+sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', hue=f'IMD ({name})')
+```
+
+```python
+prevalance_age_adj = (
+    table.apply(
+        lambda x: np.average(x, weights=df.groupby('Age')['Population'].sum()))
+    .reset_index()
+)
+sns.barplot(data=prevalance_age_adj, x='IMD (q5)', y=0)
 ```
 
 ```python
