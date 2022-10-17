@@ -20,8 +20,8 @@ import logging
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from scipy.stats import spearmanr
 import matplotlib.pyplot as plt
+from scipy.stats import spearmanr
 from esneft_tools.utils import setVerbosity, formatP
 from esneft_tools import download, process, visualise
 
@@ -80,6 +80,26 @@ sns.histplot(data=LSOAsummary.dropna(), x='IMD', hue=f'IMD ({name})', stat='prob
 ```
 
 ```python
+sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', hue=f'IMD ({name})')
+```
+
+```python
+df = LSOAsummary[['Age (median)', f'IMD ({name})', 'DM-prevalance']].dropna().copy()
+df['Age'] = pd.qcut(df['Age (median)'], 10)
+df = (
+    df.groupby(['Age', f'IMD ({name})'])['DM-prevalance']
+    .median()
+    .reset_index()
+    .pivot(index='Age', columns=f'IMD ({name})')
+    .droplevel(0, axis=1)
+)
+fig, ax = plt.subplots()
+sns.heatmap(df, cmap='viridis', ax=ax)
+ax.set_title('Diabetes Prevalance by Age and IMD', loc='left')
+fig.tight_layout()
+```
+
+```python
 sns.lmplot(
     data=LSOAsummary.dropna(), x='Age (median)', 
     y='DM-prevalance', hue=f'IMD ({name})', scatter=False)
@@ -125,19 +145,7 @@ postcodeLSOA = pd.merge(
 ```
 
 ```python
-postcodeLSOA.head()
-```
-
-```python
 sns.scatterplot(data=postcodeLSOA, x='Distance', y='IMD', hue='IMD (q5)')
-```
-
-```python
-GPsummary
-```
-
-```python
-
 ```
 
 geoLSOA = dataDownloader.fromSource('geoLSOA')
