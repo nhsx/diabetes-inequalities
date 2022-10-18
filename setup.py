@@ -32,16 +32,18 @@ setup(
     author='Stephen Richer',
     author_email='stephen.richer@nhs.net',
     url='https://github.com/nhsx/p24-pvt-diabetes-inequal.git',
-    python_requires='>=3.8.0',
+    python_requires='>=3.9.0',
     install_requires=[
-        'numpy',
+        'numpy==1.23.0',
         'plotly',
         'pandas',
         'pyarrow',
         'seaborn',
         'kaleido',
         'geopandas',
-        'matplotlib'
+        'matplotlib',
+        'fiona',
+        'nbformat'
     ],
     license='MIT',
     classifiers=[
