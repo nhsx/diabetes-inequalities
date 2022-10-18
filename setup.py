@@ -43,7 +43,8 @@ setup(
         'geopandas',
         'matplotlib',
         'fiona',
-        'nbformat'
+        'nbformat',
+        'gdal'
     ],
     license='MIT',
     classifiers=[
