@@ -7,17 +7,7 @@ ENV PIP_ROOT_USER_ACTION=ignore
 RUN    apt-get -y update \
     && apt-get -y install git \
     && apt-get -y install binutils libproj-dev gdal-bin libgdal-dev\
-    && pip install 'numpy>=1.22' \
-                   'pandas>=1.4' \
-                   'matplotlib>=3.5' \
-                   'networkx>=2.8' \
-                   'pyproj>=3.3' \
-                   'requests>=2.28' \
-                   'Rtree>=1.0' \
-                   'Fiona==1.8.22' \
-                   'gdal==3.5.2' \
-                   'geopandas>=0.11' \
-    && pip install osmnx \
+    && pip install -r requirements.txt
     && pip install .
 
 CMD ["bash"]
