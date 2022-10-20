@@ -7,6 +7,8 @@
 !*.py
 !*.sh
 !README_files/*
+!Dockerfile
+!.dockerignore
 
 # ...even if they are in subdirectories
 !*/

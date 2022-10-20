@@ -25,9 +25,15 @@
 ```bash
 pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
 ```
-Potentially create a suitable environment in order to avoid installation conflicts:
-- ```python -m venv db_env python=3.9```
-- `source db_env/bin/activate`
+
+### Docker
+
+```bash
+git clone --depth 1 https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+docker build -t esneft_tools .
+image=$(docker run -id esneft_tools)
+docker exec -i $image python < your_script.py
+```
 
 ## Setup
 The logging level of `esneft_tools` can be set via the `setVerbosity()` function.
