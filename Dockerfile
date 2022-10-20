@@ -10,15 +10,15 @@ RUN    apt-get -y update \
     && apt-get -y install gdal-bin \
     && apt-get -y install libgdal-dev \
     && pip install GDAL==$(gdal-config --version | awk -F'[.]' '{print $1"."$2}') localtileserver \
-    && pip install 'geopandas>=0.11' \
-                   'matplotlib>=3.5' \
-                   'networkx>=2.8' \
-                   'numpy>=1.22' \
-                   'pandas>=1.4' \
-                   'pyproj>=3.3' \
-                   'requests>=2.28' \
-                   'Rtree>=1.0' \
+    && pip install 'numpy=1.22' \
+                   'pandas=1.4' \
+                   'matplotlib=3.5' \
+                   'networkx=2.8' \
+                   'pyproj=3.3' \
+                   'requests=2.28' \
+                   'Rtree=1.0' \
                    'Shapely=1.9' \
+                   'geopandas=0.11' \
     && pip install osmnx \
     && pip install .
 
