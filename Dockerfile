@@ -4,6 +4,6 @@ COPY . /repo
 WORKDIR /repo
 ENV PIP_ROOT_USER_ACTION=ignore
 
-RUN    pip install -r requirements.txt \
+RUN pip install -r requirements.txt 
 
 CMD ["bash"]
