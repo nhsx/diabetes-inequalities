@@ -6,10 +6,6 @@ ENV PIP_ROOT_USER_ACTION=ignore
 
 RUN    apt-get -y update \
     && apt-get -y install git \
-    && apt-get -y install python3-dev \
-    && apt-get -y install gdal-bin \
-    && apt-get -y install libgdal-dev \
-    && pip install GDAL==$(gdal-config --version | awk -F'[.]' '{print $1"."$2}') localtileserver \
     && pip install 'numpy==1.22' \
                    'pandas==1.4' \
                    'matplotlib==3.5' \
@@ -18,6 +14,7 @@ RUN    apt-get -y update \
                    'requests==2.28' \
                    'Rtree==1.0' \
                    'Shapely==1.9' \
+                   'gdal' \
                    'geopandas==0.11' \
     && pip install osmnx \
     && pip install .
