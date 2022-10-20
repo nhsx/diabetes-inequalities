@@ -16,6 +16,8 @@ RUN    apt-get -y update \
                    'requests>=2.28' \
                    'Rtree>=1.0' \
                    'Shapely>=1.8' \
+                   'gdal-bin' \
+                   'fiona' \
                    'gdal>=3.5.2' \
                    'geopandas>=0.11' \
     && pip install osmnx \
