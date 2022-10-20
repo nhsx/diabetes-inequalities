@@ -8,7 +8,8 @@ RUN    apt-get -y update \
     && apt-get -y install git \
     && apt-get update \
     && apt-get install -y binutils libproj-dev gdal-bin \
-    && pip install 'numpy>=1.22' \
+    && pip install '-e' \
+                   'numpy>=1.22' \
                    'pandas>=1.4' \
                    'matplotlib>=3.5' \
                    'networkx>=2.8' \
