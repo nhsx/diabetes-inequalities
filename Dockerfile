@@ -14,7 +14,7 @@ RUN    apt-get -y update \
                    'pyproj>=3.3' \
                    'requests>=2.28' \
                    'Rtree>=1.0' \
-                   'gdal-bin' \
+                   'gdal-bin==3.5.2' \
                    'fiona' \
                    'gdal>=3.5.2' \
                    'geopandas>=0.11' \
