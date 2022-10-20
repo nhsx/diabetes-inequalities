@@ -14,7 +14,7 @@ RUN    apt-get -y update \
                    'pyproj>=3.3' \
                    'requests>=2.28' \
                    'Rtree>=1.0' \
-                   'fiona' \
+                   'Fiona==1.8.22' \
                    'gdal>=3.5.2' \
                    'geopandas>=0.11' \
     && pip install osmnx \
