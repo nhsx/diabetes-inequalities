@@ -8,15 +8,13 @@ RUN    apt-get -y update \
     && apt-get -y install git \
     && apt-get update \
     && apt-get install -y binutils libproj-dev gdal-bin \
-    && pip install '-e' \
-                   'numpy>=1.22' \
+    && pip install 'numpy>=1.22' \
                    'pandas>=1.4' \
                    'matplotlib>=3.5' \
                    'networkx>=2.8' \
                    'pyproj>=3.3' \
                    'requests>=2.28' \
                    'Rtree>=1.0' \
-                   'Shapely>=1.8' \
                    'gdal-bin' \
                    'fiona' \
                    'gdal>=3.5.2' \
