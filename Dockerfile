@@ -15,7 +15,7 @@ RUN    apt-get -y update \
                    'pyproj==3.3' \
                    'requests==2.28' \
                    'Rtree==1.0' \
-                   'Shapely==1.9' \
+                   'Shapely>=1.8' \
                    'gdal' \
                    'geopandas==0.11' \
     && pip install osmnx \
