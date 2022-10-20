@@ -6,10 +6,9 @@ ENV PIP_ROOT_USER_ACTION=ignore
 
 RUN    apt-get -y update \
     && apt-get -y install git \
-    && apt-get update \
-    && apt-get install python3-dev \
-    && apt-get install gdal-bin \
-    && apt-get install libgdal-dev \
+    && apt-get -y install python3-dev \
+    && apt-get -y install gdal-bin \
+    && apt-get -y install libgdal-dev \
     && pip install GDAL==$(gdal-config --version | awk -F'[.]' '{print $1"."$2}') localtileserver \
     && pip install 'geopandas>=0.11' \
                    'matplotlib>=3.5' \
