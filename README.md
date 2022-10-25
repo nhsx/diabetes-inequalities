@@ -7,7 +7,7 @@
   * [Installation](#installation)
     * [Virtual Environment](#virtual-environment)
       * [Unix/macOS](#unix-macos)
-      * [Windows](#unix-macos)
+      * [Windows](#windows)
     * [Docker](#docker)
   * [Setup](#setup)
   * [Retrieve Data](#retrieve-public-data)
@@ -59,7 +59,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ### Docker
-Refer to the [Docker documentation](#https://docs.docker.com/get-docker/) for Docker installation instructions.
 
 ```bash
 git clone --depth 1 https://github.com/nhsx/p24-pvt-diabetes-inequal.git
@@ -67,6 +66,8 @@ docker build -t esneft_tools .
 image=$(docker run -id esneft_tools)
 docker exec -i $image python < your_script.py
 ```
+
+Refer to the [Docker documentation](https://docs.docker.com/get-docker/) for Docker installation instructions.
 
 ### Optional Dependencies
 Additional geospatial utilities may be optionally installed as below.
