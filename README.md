@@ -163,6 +163,7 @@ GPsummary = process.getGPsummary(**data, iod_cols='IMD')
 | ESNEFT              | Boolean Flag of Practices within ESNEFT                   |
 | Node                | Closest OSM Map Node to Site                              |
 
+
 #### Aggregate by LSOA Level
 The `getLSOAsummary` function aggregates the downloaded data LSOA level statistics.
 
@@ -203,6 +204,7 @@ distances = process.computeTravelDistance(data['esneftOSM'], activeGP, maxQuant=
 | Distance | Distances by Road (metres) to Nearest Service(s) |
 | SiteIDs  | Practise Service Code(s) of Nearest Services     |
 
+
 ### Visualise
 
 ### Practice Map
@@ -226,7 +228,9 @@ fig.write_image('LSOA-choropleth.png')
 ![gp-loc](./README_files/LSOA-choropleth.png)
  <br> *Choropleth Map of LSOA Domains within ESNEFT coloured by IMD (Plotly Interactive)*
 
+
 ### Healthcare Accessibility
+ **Note: This functionality requires OSMnx installation**
 
 ```python
 fig, ax = visualise.plotTravelTime(
@@ -236,8 +240,10 @@ fig, ax = visualise.plotTravelTime(
 ![gp-loc](./README_files/GP-accessibility.png)
  <br> *Heat map visualising distance to nearest GP Practice within ESNEFT*
 
+
 ## License
 Distributed under the MIT License. _See [LICENSE](./LICENSE) for more information._
+
 
 ## Contact
 
