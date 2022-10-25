@@ -34,18 +34,17 @@ setup(
     url='https://github.com/nhsx/p24-pvt-diabetes-inequal.git',
     python_requires='>=3.9.0',
     install_requires=[
-        'numpy==1.23.0',
+        'numpy~=1.23.0',
         'plotly',
         'pandas',
         'pyarrow',
         'seaborn',
         'kaleido',
-        'geopandas',
         'matplotlib',
-        'fiona',
-        'nbformat',
-        'gdal'
     ],
+    extras_require={
+        'geo': ['geopandas', 'fiona', 'gdal'],
+    },
     license='MIT',
     classifiers=[
         'Development Status :: 1 - Planning',
