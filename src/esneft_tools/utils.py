@@ -80,7 +80,7 @@ def writeEncrypt(df, key, path=None):
             df[name] = df[col].dt.strftime('%Y-%B-%d-%H-%M-%S')
         else:
             df[name] = df[col].astype(str)
-        name_encrypt = f.encrypt(f'{name}-encrypted'.encode('utf-8'))
+        name_encrypt = f.encrypt(f'{name}-encrypted'.encode('utf-8')).decode('utf-8')
         df[name_encrypt] = df[name].apply(
             lambda x: f.encrypt(str(x).encode('utf-8')))
         df = df.drop([name, col], axis=1)
@@ -91,9 +91,10 @@ def writeEncrypt(df, key, path=None):
 
 def readEncrypt(path, key):
     df = pd.read_parquet(path)
+    f = readKey(key)
     encrypted_cols = df.columns
     for col_name_encrypt in encrypted_cols:
-        col_name = f.decrypt(col_name_encrypt).decode('utf-8')
+        col_name = f.decrypt(col_name_encrypt.encode('utf-8')).decode('utf-8')
         if not col_name.endswith('-encrypted'):
             continue
         name = col_name.removesuffix('-encrypted')
@@ -102,7 +103,7 @@ def readEncrypt(path, key):
         col, dtype = name.rsplit('-', 1)
         if dtype == 'dt':
             df[col] = df[name].apply(
-                lambda x: pd.NaT if x == 'nan' else
+                lambda x: pd.NaT if x == 'nan' else 
                 datetime.strptime(x, '%Y-%B-%d-%H-%M-%S'))
         elif dtype == 'object':
             df[col] = df[name]
