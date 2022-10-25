@@ -26,6 +26,12 @@
 pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
 ```
 
+To install optional geospatial utilities run the following command.
+
+```bash
+pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal#egg=esneft_tools[geo]
+```
+
 ### Docker
 
 ```bash
