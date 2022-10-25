@@ -39,7 +39,7 @@ Run the following commands via Terminal.
 
 ```bash
 python -m venv esneft_tools
-source env/bin/activate
+source esneft_tools/bin/activate
 pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
 ```
 
