@@ -5,6 +5,10 @@
 ## Table of contents
 
   * [Installation](#installation)
+    * [Virtual Environment](#virtual-environment)
+      * [Unix/macOS](#unixmacos)
+      * [Windows](#windows)
+    * [Docker](#docker)
   * [Setup](#setup)
   * [Retrieve Data](#retrieve-public-data)
     * [Download](#download)
@@ -21,9 +25,37 @@
 
 
 ## Installation
+Installation is possible via `pip` as shown below.
+To manage dependencies and avoid conflicts it is recommended to install within a [virtual environment](#virtual-environment) or a [Docker container](#docker) as described.
 
 ```bash
 pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+```
+
+### Virtual Environment
+
+#### Unix/macOS
+Run the following commands via Terminal.
+
+```bash
+python -m venv esneft_tools
+source esneft_tools/bin/activate
+pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+```
+
+#### Windows
+Run the following commands via PowerShell.
+
+```PowerShell
+py -m venv esneft_tools
+esneft_tools/Scripts/Activate.ps1
+pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+```
+
+If running scripts is disabled on your system then run the following command before activating your environment.
+
+```PowerShell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ### Docker
@@ -34,6 +66,19 @@ docker build -t esneft_tools .
 image=$(docker run -id esneft_tools)
 docker exec -i $image python < your_script.py
 ```
+
+Refer to the [Docker documentation](https://docs.docker.com/get-docker/) for Docker installation instructions.
+
+### Optional Dependencies
+Additional geospatial utilities may be optionally installed as below.
+Note these packages have non-trivial dependencies and automatic installation may not work on all systems.
+
+```bash
+pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal#egg=esneft_tools[geo]
+```
+
+An additional optional dependency, OSMnx, must be installed by the user.
+Please refer to the [OSMnx documentation](https://osmnx.readthedocs.io/en/stable/) for further installation instructions.
 
 ## Setup
 The logging level of `esneft_tools` can be set via the `setVerbosity()` function.
@@ -118,6 +163,7 @@ GPsummary = process.getGPsummary(**data, iod_cols='IMD')
 | ESNEFT              | Boolean Flag of Practices within ESNEFT                   |
 | Node                | Closest OSM Map Node to Site                              |
 
+
 #### Aggregate by LSOA Level
 The `getLSOAsummary` function aggregates the downloaded data LSOA level statistics.
 
@@ -158,6 +204,7 @@ distances = process.computeTravelDistance(data['esneftOSM'], activeGP, maxQuant=
 | Distance | Distances by Road (metres) to Nearest Service(s) |
 | SiteIDs  | Practise Service Code(s) of Nearest Services     |
 
+
 ### Visualise
 
 ### Practice Map
@@ -181,7 +228,9 @@ fig.write_image('LSOA-choropleth.png')
 ![gp-loc](./README_files/LSOA-choropleth.png)
  <br> *Choropleth Map of LSOA Domains within ESNEFT coloured by IMD (Plotly Interactive)*
 
+
 ### Healthcare Accessibility
+ **Note: This functionality requires OSMnx installation**
 
 ```python
 fig, ax = visualise.plotTravelTime(
@@ -191,8 +240,10 @@ fig, ax = visualise.plotTravelTime(
 ![gp-loc](./README_files/GP-accessibility.png)
  <br> *Heat map visualising distance to nearest GP Practice within ESNEFT*
 
+
 ## License
 Distributed under the MIT License. _See [LICENSE](./LICENSE) for more information._
+
 
 ## Contact
 
