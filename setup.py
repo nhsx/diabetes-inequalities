@@ -43,7 +43,7 @@ setup(
         'matplotlib',
     ],
     extras_require={
-        'geo': ['geopandas', 'fiona', 'gdal'],
+        'geo': ['geopandas', 'fiona'],
     },
     license='MIT',
     classifiers=[
