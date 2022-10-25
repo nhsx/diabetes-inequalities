@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.14.1
+      jupytext_version: 1.14.0
   kernelspec:
     display_name: Python 3 (ipykernel)
     language: python
@@ -45,7 +45,9 @@ fig, ax = plt.subplots()
 sns.kdeplot(data=GPsummary, x='IMD', y='DM-prevalance', fill=True, ax=ax)
 sns.regplot(data=GPsummary, x='IMD', y='DM-prevalance', order=2, scatter=False, ax=ax)
 ax.set_ylim(0, 0.15)
+ax.set_ylabel('Diabetes prevalance')
 fig.tight_layout()
+fig.savefig('national_prevalance_by_imd.png', dpi=300)
 ```
 
 ```python
@@ -60,6 +62,7 @@ for i, (metric, label) in enumerate(metrics.items()):
     axes[i].set_ylim(0.2, 0.9)
 axes[0].set_ylabel('Proportion of patients meeting treatment target')
 fig.tight_layout()
+fig.savefig('dm-metrics-by-imd.png', dpi=300)
 ```
 
 ```python
@@ -96,7 +99,14 @@ fig.tight_layout()
 ```
 
 ```python
-sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', hue=f'IMD ({name})')
+sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', y='IMD', fill=True)
+```
+
+```python
+fig, ax = plt.subplots()
+sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', hue=f'IMD ({name})', ax=ax)
+fig.tight_layout()
+fig.savefig('age-by-imd.png', dpi=300)
 ```
 
 ```python
@@ -109,9 +119,10 @@ sns.barplot(data=prevalance_age_adj, x='IMD (q5)', y=0)
 ```
 
 ```python
-sns.lmplot(
+prev_by_imd = sns.lmplot(
     data=LSOAsummary.dropna(), x='Age (median)', 
     y='DM-prevalance', hue=f'IMD ({name})', scatter=False)
+prev_by_imd.savefig('prevalance-by-age_imd.png', dpi=300)
 ```
 
 ```python
