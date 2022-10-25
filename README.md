@@ -6,7 +6,7 @@
 
   * [Installation](#installation)
     * [Virtual Environment](#virtual-environment)
-      * [Unix/macOS](#unix-macos)
+      * [Unix/macOS](#unixmacos)
       * [Windows](#windows)
     * [Docker](#docker)
   * [Setup](#setup)
