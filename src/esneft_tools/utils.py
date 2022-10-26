@@ -60,36 +60,25 @@ def writeEncrypt(df, key, path=None):
     df = df.reset_index()
     cols = df.columns
     for col in cols:
+        name = f'{col}-encrypted'
         dtype = df[col].dtype
-        if dtype == float:
-            name = f'{col}-float'
-        elif dtype == int:
-            name = f'{col}-int'
-        elif dtype == bool:
-            name = f'{col}-bool'
-        elif is_datetime(df[col]):
-            name = f'{col}-dt'
-        elif is_object_dtype(df[col]):
-            name = f'{col}-object'
-            df.loc[df[col].isna(), col] = ''
-        elif (dtype == 'category'):
-            if '-' in repr(dtype):
-                logging.error('Cannot encrypt categorical dtype '
-                              'with "-" character in categories.')
-                continue
-            name = f'{col}-pd.{repr(dtype)}'
-        else:
-            logging.error(f'Cannot encrypt column {col} with dtype {dtype}.')
-            continue
-        if name.endswith('-dt'):
-            df[name] = df[col].dt.strftime('%Y-%B-%d-%H-%M-%S')
-        elif name.endswith('-object'):
+        if is_object_dtype(df[col]):
             df[name] = df[col]
-        else:
+        elif dtype in [float, int, bool]:
             df[name] = df[col].apply(lambda x: repr(x))
-        name_encrypt = f.encrypt(f'{name}-encrypted'.encode('utf-8')).decode('utf-8')
+        elif dtype == 'category':
+            name = f'{col}-pd.{repr(dtype)}-encrypted'
+            df[name] = df[col].apply(lambda x: repr(x))
+        else:
+            try:
+                eval(f'pd.{repr(df.iloc[0][col])}')
+            except:
+                logging.error(f'Cannot encrypt dtype {dtype}')
+                continue
+            df[name] = df[col].apply(lambda x: f'pd.{repr(x)}')
+        name_encrypt = f.encrypt(name.encode('utf-8')).decode('utf-8')
         df[name_encrypt] = df[name].apply(
-            lambda x: f.encrypt(str(x).encode('utf-8')))
+            lambda x: f.encrypt(x.encode('utf-8')))
         df = df.drop([name, col], axis=1)
     if path is not None:
         df.to_parquet(path)
@@ -101,28 +90,27 @@ def readEncrypt(path, key):
     f = readKey(key)
     encrypted_cols = df.columns
     for col_name_encrypt in encrypted_cols:
+        drop = [col_name_encrypt]
         col_name = f.decrypt(col_name_encrypt.encode('utf-8')).decode('utf-8')
         if not col_name.endswith('-encrypted'):
             continue
         name = col_name.removesuffix('-encrypted')
         df[name] = df[col_name_encrypt].apply(
             lambda x: f.decrypt(x).decode('utf-8'))
-        col, dtype = name.rsplit('-', 1)
-        if dtype == 'dt':
-            df[col] = df[name].apply(
-                lambda x: pd.NaT if x == 'nan' else
-                datetime.strptime(x, '%Y-%B-%d-%H-%M-%S'))
-        elif dtype == 'object':
-            df[col] = df[name]
-            df.loc[df[col] == '', col] = np.nan
-        elif dtype.startswith('pd.Categorical'):
-            dtype = eval(dtype)
+        if 'pd.Categorical' in name:
+            pos = name.find('pd.Categorical')
+            dtype = eval(name[pos:])
             # Fix underlying dtype
+            col = name[:pos-1]
             df[col] = df[name].astype(dtype.categories.dtype)
             # Then convert back to category
             df[col] = df[col].astype(dtype)
+            drop.append(name)
         else:
-            df[col] = df[name].astype(eval(dtype))
-        df = df.drop([name, col_name_encrypt], axis=1)
+            try:
+               df[name] = df[name].apply(lambda x: eval(x))
+            except:
+               pass
+        df = df.drop(drop, axis=1)
     df = df.set_index(df.columns[0])
     return df
