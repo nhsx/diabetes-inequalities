@@ -58,16 +58,14 @@ class getData():
     @property
     def expectedHashes(self):
         return ({
-            'lsoa-name.parquet': '2aac2ea909d2a53da0d64c4ad4fa6c5777e444bf725020217ed2b4c18a8a059f',
-            'postcode-lsoa.parquet': '2ef1cb6627eef638ba5e8f2c10ed93e1d3c31e7e89dc15d6ffc7937b31a886de',
-            'imd-statistics.parquet': '4a20c6a394124205a767e2f420efb7604d7a9b45ce307cc3dd39fc6df7fc62ff',
-            'population-lsoa.parquet': '4958ab685cd78ded47ecba494a9e1130ae7a2758bc8206cbeb6af3b5466f801a',
-            'land-area-lsoa.parquet': '7e15440b842b5502e508a2a4a49e51f6aa328a0b80d885710015b16795c2f676',
-            'gp-registrations.parquet': 'b039285e697264315beb13d8922a605bdb30fe668d598d4ce9d2360f099831a8',
-            'gp-practices.parquet': 'b5a600f47443a5cc20c1322ed90d879380c8c9f909886bb4ed7a20203395d8f4',
-            'gp-staff.parquet': 'f2b1eccecab5f53b93d2a5ba1f86d6d9e3b20cd63443359788cb0c828871c949',
-            'qof-dm.parquet': 'a2c0e619ac8911cfbbc342121a001c24673c0ad763d15b154d9eb4c4dc4b3b9e',
-            'lsoa-map-esneft.geojson': '900f548cd72dbaff779af5fc333022f05e0ea42be162194576c6086ce695ba28'
+            'postcode-lsoa.parquet': '0cdb127da3aa6b2d56d9b1e2454a78598011511c5a7e0a162ac9502b6296a5f6',
+            'imd-statistics.parquet': 'bd5fa8fc321ac1aedd7a85a646e1f70c5988f3ac9f0fe9864a5a9635b41d4dc5',
+            'population-lsoa.parquet': '499e3b0bca79a62b00a9d7478e513def8a3e3c2347da891c62daa0f0b5759228',
+            'land-area-lsoa.parquet': '185aaa6d21e1033cc56cf7f9ae45162b01caab0d9fd5f4c73283c956833c4c4f',
+            'gp-registrations.parquet': 'c0d2a40842d8007d4c9d62a469852c965889dd78691b459c191b8572a5786650',
+            'gp-practices.parquet': '1b198e29d029155fa7d369b6f0f7e8506ecd62199fd3f2a351611222a94c0789',
+            'gp-staff.parquet': '28b02ac75b43530b6702dc7432208578695e83fa0c931618a34412b66a2066a5',
+            'qof-dm.parquet': '8edb6e9cef9d9bb148fa4d044ae35639b7bb014cf99cdc9a0ac45dfc16686bd1'
         })
 
 
@@ -138,10 +136,12 @@ class getData():
             'qofDM': self._sourceQOF,
             'geoLSOA': self._sourceMap,
         })
-
         data = sourceMap[name]()
+        if name == 'geoLSOA':
+            logging.debug('Hash verification not implemented for geojson')
+            return data
         path = self._getSourcePath(name)
-        sourceHash = self._checkHash(path)
+        sourceHash = self._checkHash(data)
         baseName = Path(path).name
         self.observedHashes[baseName] = sourceHash
         logger.info(f'Verifying hash of {baseName} ...')
@@ -156,14 +156,19 @@ class getData():
         return f'{self.cache}/{self.options[name]}'
 
 
-    def _checkHash(self, path: str, readSize: int = 4096):
+    def _checkHash(self, df, readSize: int = 4096):
+        tf = tempfile.NamedTemporaryFile(delete=False)
+        df.to_csv(tf.name, float_format='%.3f')
         sha256Hash = hashlib.sha256()
-        with open(path, 'rb') as f:
+        with open(tf.name, 'rb') as f:
             data = f.read(readSize)
             while data:
                 sha256Hash.update(data)
                 data = f.read(readSize)
-        return sha256Hash.hexdigest()
+        hash = sha256Hash.hexdigest()
+        tf.close()
+        os.remove(tf.name)
+        return hash
 
 
     def _sourceLSOA(self):
@@ -193,13 +198,14 @@ class getData():
             .drop(['Eastings', 'Northings'], axis=1))
         postcodeLSOA['ESNEFT'] = postcodeLSOA['LSOA11CD'].isin(esneftLSOA)
         G = self.fromHost('esneftOSM')
-        # Get rows in ESNEFT with Lat Long
-        valid = (postcodeLSOA['ESNEFT']
-                 & postcodeLSOA[['Lat', 'Long']].notna().all(axis=1))
-        postcodeLSOA.loc[valid, 'Node'] = (
-            ox.distance.nearest_nodes(G,
-                postcodeLSOA.loc[valid, 'Long'],
-                postcodeLSOA.loc[valid, 'Lat']))
+        if G is not None:
+            # Get rows in ESNEFT with Lat Long
+            valid = (postcodeLSOA['ESNEFT']
+                     & postcodeLSOA[['Lat', 'Long']].notna().all(axis=1))
+            postcodeLSOA.loc[valid, 'Node'] = (
+                ox.distance.nearest_nodes(G,
+                    postcodeLSOA.loc[valid, 'Long'],
+                    postcodeLSOA.loc[valid, 'Lat']))
         logger.info(f'Writing Postcode: LSOA map to {path}')
         postcodeLSOA.to_parquet(path)
         return postcodeLSOA
