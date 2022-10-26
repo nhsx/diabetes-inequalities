@@ -76,7 +76,7 @@ def writeEncrypt(df, key, path=None):
         if name.endswith('-dt'):
             df[name] = df[col].dt.strftime('%Y-%B-%d-%H-%M-%S')
         else:
-            df[name] = df[col].astype(str)
+            df[name] = df[col].apply(lambda x: repr(x))
         name_encrypt = f.encrypt(f'{name}-encrypted'.encode('utf-8')).decode('utf-8')
         df[name_encrypt] = df[name].apply(
             lambda x: f.encrypt(str(x).encode('utf-8')))
