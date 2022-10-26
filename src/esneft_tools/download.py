@@ -28,6 +28,7 @@ try:
 except ModuleNotFoundError:
     logger.error('OSMNX not found - some features are unavailable.')
 
+
 class getData():
 
     def __init__(self, cache: str = './.data-cache'):
@@ -46,7 +47,6 @@ class getData():
             'esneftLSOA': 'lsoa-esneft.json',
             'geoLSOA': 'lsoa-map-esneft.geojson',
             'esneftOSM': 'esneft-highways.osm.gz'
-
         })
         self.observedHashes = {}
         self.osmnx = 'osmnx' in sys.modules
