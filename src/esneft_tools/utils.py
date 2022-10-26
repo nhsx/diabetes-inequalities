@@ -3,6 +3,8 @@
 
 import os
 import logging
+import numpy as np
+import pandas as pd
 from datetime import datetime
 from cryptography.fernet import Fernet
 from pandas.api.types import is_object_dtype
@@ -70,11 +72,19 @@ def writeEncrypt(df, key, path=None):
         elif is_object_dtype(df[col]):
             name = f'{col}-object'
             df.loc[df[col].isna(), col] = ''
+        elif (dtype == 'category'):
+            if '-' in repr(dtype):
+                logging.error('Cannot encrypt categorical dtype '
+                              'with "-" character in categories.')
+                continue
+            name = f'{col}-pd.{repr(dtype)}'
         else:
             logging.error(f'Cannot encrypt column {col} with dtype {dtype}.')
             continue
         if name.endswith('-dt'):
             df[name] = df[col].dt.strftime('%Y-%B-%d-%H-%M-%S')
+        elif name.endswith('-object'):
+            df[name] = df[col]
         else:
             df[name] = df[col].apply(lambda x: repr(x))
         name_encrypt = f.encrypt(f'{name}-encrypted'.encode('utf-8')).decode('utf-8')
@@ -105,6 +115,12 @@ def readEncrypt(path, key):
         elif dtype == 'object':
             df[col] = df[name]
             df.loc[df[col] == '', col] = np.nan
+        elif dtype.startswith('pd.Categorical'):
+            dtype = eval(dtype)
+            # Fix underlying dtype
+            df[col] = df[name].astype(dtype.categories.dtype)
+            # Then convert back to category
+            df[col] = df[col].astype(dtype)
         else:
             df[col] = df[name].astype(eval(dtype))
         df = df.drop([name, col_name_encrypt], axis=1)
