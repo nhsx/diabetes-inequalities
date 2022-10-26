@@ -41,9 +41,10 @@ setup(
         'seaborn',
         'kaleido',
         'matplotlib',
+        'cryptography'
     ],
     extras_require={
-        'geo': ['geopandas', 'fiona'],
+        'geo': ['geopandas', 'fiona', 'pyproj'],
     },
     license='MIT',
     classifiers=[
