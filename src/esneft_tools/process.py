@@ -4,7 +4,6 @@ import sys
 import logging
 import numpy as np
 import pandas as pd
-import networkx as nx
 from collections import defaultdict
 
 
@@ -13,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import osmnx as ox
+    import networkx as nx
 except ModuleNotFoundError:
     logger.error('OSMNX not found - some features are unavailable.')
 
@@ -81,7 +81,7 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
     name = 'q' if quantile else 'i'
     for col in iod_cols:
         summary[f'{col} ({name}{bins})'] = cutter(
-            summary[col], bins, labels=list(range(1, bins+1)))
+            summary[col], bins, labels=list(range(bins, 0, -1)))
     summary['DM-prevalance'] = _getLSOAprevalence(gpRegistration, qofDM)
     summary['Density'] = summary['Population'] / summary['LandHectare']
     summary['ESNEFT'] = summary.index.isin(esneftLSOA)
