@@ -10,13 +10,10 @@ import zipfile
 import logging
 import tempfile
 import pathlib
-import geopandas
 import numpy as np
 import pandas as pd
 import urllib.request
 from datetime import date
-from pyproj import Transformer
-from urllib.request import urlopen
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +24,16 @@ try:
     import networkx as nx
 except ModuleNotFoundError:
     logger.error('OSMNX not found - some features are unavailable.')
+
+try:
+    from pyproj import Transformer
+except ModuleNotFoundError:
+    logger.error('pyproj not found - some features are unavailable.')
+
+try:
+    import geopandas
+except ModuleNotFoundError:
+    logger.error('geopandas not found - some features are unavailable.')
 
 
 class getData():
@@ -87,7 +94,7 @@ class getData():
                 open_ = open
             else:
                 path = f'{self.host}/{self.options[name]}'
-                open_ = urlopen
+                open_ = urllib.request.urlopen
             if path.endswith('.geojson'):
                 with open_(path) as geofile:
                     if os.path.exists(out):
