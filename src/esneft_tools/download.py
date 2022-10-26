@@ -14,7 +14,6 @@ import geopandas
 import numpy as np
 import pandas as pd
 import urllib.request
-from pathlib import Path
 from datetime import date
 from pyproj import Transformer
 from urllib.request import urlopen
@@ -58,14 +57,16 @@ class getData():
     @property
     def expectedHashes(self):
         return ({
-            'postcode-lsoa.parquet': '0cdb127da3aa6b2d56d9b1e2454a78598011511c5a7e0a162ac9502b6296a5f6',
-            'imd-statistics.parquet': 'bd5fa8fc321ac1aedd7a85a646e1f70c5988f3ac9f0fe9864a5a9635b41d4dc5',
-            'population-lsoa.parquet': '499e3b0bca79a62b00a9d7478e513def8a3e3c2347da891c62daa0f0b5759228',
-            'land-area-lsoa.parquet': '185aaa6d21e1033cc56cf7f9ae45162b01caab0d9fd5f4c73283c956833c4c4f',
-            'gp-registrations.parquet': 'c0d2a40842d8007d4c9d62a469852c965889dd78691b459c191b8572a5786650',
-            'gp-practices.parquet': '1b198e29d029155fa7d369b6f0f7e8506ecd62199fd3f2a351611222a94c0789',
-            'gp-staff.parquet': '28b02ac75b43530b6702dc7432208578695e83fa0c931618a34412b66a2066a5',
-            'qof-dm.parquet': '8edb6e9cef9d9bb148fa4d044ae35639b7bb014cf99cdc9a0ac45dfc16686bd1'
+            'postcodeLSOA': '34bf96ff8f316c6f9dada1d52dc8032e52bed7717d73b5fda4fe1d491e4cdb66',
+            'postcodeLatLong': '1a57720e30f3c7e0843b14e3c4e9a0f8f6dba43714b02dfebf1adacbe0063bd8',
+            'imdLSOA': 'af86bf505d9174a65cc87eb9ad97b85b2b53bf481d0e75c7cf41aa5645622aa2',
+            'populationLSOA': '42cae583caf558be7aa285c94141c9d3151e3b4b66a15499e4fbf2d114d6ae36',
+            'areaLSOA': '7f97767f8142754b81a6c8a0722d3d104a89e1a4c72276eb1dc00e06ebbca3ff',
+            'gpRegistration': '920beffa35cba1d2cdcd879603cd886c337d550961048f3c13e2ac8d6e4cf8c2',
+            'gpPractice': '3584ac0f169747f6a7486983a593db825703f947d7e63af004936abd354c0e93',
+            'gpStaff': 'ffacd0da1b8b5c04aa0a1d96587e561438c54d61d8616507af14c6b11bc7d29e',
+            'qofDM': 'c4e76d342125acbcc852549b3571afac5fa0299ffb48274b6339158cc4ede3c2',
+            'geoLSOA': '608783e31e588706ca3215768fa6df6f08e88e1a51101a82f5587e52c483399f'
         })
 
 
@@ -137,18 +138,6 @@ class getData():
             'geoLSOA': self._sourceMap,
         })
         data = sourceMap[name]()
-        if name == 'geoLSOA':
-            logging.debug('Hash verification not implemented for geojson')
-            return data
-        path = self._getSourcePath(name)
-        sourceHash = self._checkHash(data)
-        baseName = Path(path).name
-        self.observedHashes[baseName] = sourceHash
-        logger.info(f'Verifying hash of {baseName} ...')
-        if sourceHash == self.expectedHashes[baseName]:
-            logger.info('... source matches host file.')
-        else:
-            logger.error('... source does NOT match host file.')
         return data
 
 
@@ -156,19 +145,27 @@ class getData():
         return f'{self.cache}/{self.options[name]}'
 
 
-    def _checkHash(self, df, readSize: int = 4096):
-        tf = tempfile.NamedTemporaryFile(delete=False)
-        df.to_csv(tf.name, float_format='%.3f')
+    def _getHash(self, files, readSize: int = 4096):
         sha256Hash = hashlib.sha256()
-        with open(tf.name, 'rb') as f:
-            data = f.read(readSize)
-            while data:
-                sha256Hash.update(data)
+        for file in files:
+            with open(file, 'rb') as f:
                 data = f.read(readSize)
+                while data:
+                    sha256Hash.update(data)
+                    data = f.read(readSize)
         hash = sha256Hash.hexdigest()
-        tf.close()
-        os.remove(tf.name)
         return hash
+
+
+    def _verifyHash(self, name, files: list, readSize: int = 4096):
+        self.observedHashes[name] = self._getHash(files, readSize)
+        logger.info(f'Verifying hash of {name} ...')
+        if self.observedHashes[name] == self.expectedHashes[name]:
+            logger.info('... hash verification successful.')
+            return 0
+        else:
+            logger.error('... hash verfication failed.')
+            return 1
 
 
     def _sourceLSOA(self):
@@ -187,6 +184,7 @@ class getData():
                 'LSOA11NM': str, # LSOA Name (Census 2011)
             })
             cols = [2, 7, 10]
+            self._verifyHash('postcodeLSOA', [f'{tmp}/{name}'])
             postcodeLSOA = pd.read_csv(
                 f'{tmp}/{name}', usecols=cols, names=dtype.keys(), dtype=dtype,
                 skiprows=1, sep=',', encoding='latin-1')
@@ -221,6 +219,7 @@ class getData():
                 zipRef.extractall(f'{tmp}/')
             files = glob.glob(f'{tmp}/Data/CSV/*csv')
             cols = ['PCDS', 'Eastings', 'Northings']
+            self._verifyHash('postcodeLatLong', files)
             pcdGPS = pd.concat([
                 pd.read_csv(file, usecols=[0,2,3], names=cols, sep=',')
                 for file in files]).set_index('PCDS')
@@ -267,6 +266,7 @@ class getData():
         path = self._getSourcePath('imdLSOA')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/{name}')
+            self._verifyHash('imdLSOA', [f'{tmp}/{name}'])
             imdLSOA = pd.read_csv(
                 f'{tmp}/{name}', usecols=cols, names=dtype.keys(),
                 dtype=dtype, skiprows=1, sep=',').set_index('LSOA11CD')
@@ -291,6 +291,7 @@ class getData():
             opener.addheaders = headers
             urllib.request.install_opener(opener)
             urllib.request.urlretrieve(url, f'{tmp}/{name}')
+            self._verifyHash('populationLSOA', [f'{tmp}/{name}'])
             populationLSOA = pd.concat([
                 self._processPopulationSheet(f'{tmp}/{name}', 'Male'),
                 self._processPopulationSheet(f'{tmp}/{name}', 'Female'),
@@ -324,6 +325,7 @@ class getData():
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
                 zipRef.extractall(f'{tmp}/')
+            self._verifyHash('areaLSOA', [f'{tmp}/SAM_LSOA_DEC_2011_EW.xlsx'])
             areaLSOA = (
                 pd.read_excel(f'{tmp}/SAM_LSOA_DEC_2011_EW.xlsx')
                 .set_index('LSOA11CD')
@@ -350,6 +352,8 @@ class getData():
                 'Patient'         : int,
             })
             cols = [2, 3, 4, 6]
+            self._verifyHash(
+                'gpRegistration', [f'{tmp}/gp-reg-pat-prac-lsoa-all.csv'])
             gpRegistration = pd.read_csv(
                 f'{tmp}/gp-reg-pat-prac-lsoa-all.csv', skiprows=1,
                 usecols=cols, dtype=dtype, names=dtype.keys())
@@ -375,8 +379,9 @@ class getData():
                 'PrescribingSetting': int
             })
             cols = [0, 1, 9, 10, 11, 12, 25]
+            self._verifyHash('gpPractice', [f'{tmp}/epraccur.csv'])
             gpPractices = pd.read_csv(
-                f'{tmp}//epraccur.csv', usecols=cols, names=dtype.keys(),
+                f'{tmp}/epraccur.csv', usecols=cols, names=dtype.keys(),
                 dtype=dtype, sep=',', encoding='latin-1')
         statusMap = ({
             'A': 'Active',
@@ -440,6 +445,7 @@ class getData():
                 'Left'            : str,
             })
             cols = [0, 1, 3, 4]
+            self._verifyHash('gpStaff', [f'{tmp}/epracmem.csv'])
             gpStaff = pd.read_csv(
                 f'{tmp}/epracmem.csv', usecols=cols,
                 names=dtype.keys(), dtype=dtype, sep=',')
@@ -480,6 +486,7 @@ class getData():
                 'DM020-den': int,
             })
             cols = [5, 10, 12, 17, 54, 59, 62, 67]
+            self._verifyHash('qofDM', [f'{tmp}/data.xlsx'])
             qofDM = pd.read_excel(
                 f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
                 usecols=cols, skiprows=11, nrows=6470,
@@ -505,6 +512,7 @@ class getData():
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
                 zipRef.extractall(f'{tmp}/')
+            self._verifyHash('geoLSOA', [f'{tmp}/infuse_lsoa_lyr_2011.shp'])
             geodf = geopandas.read_file(f'{tmp}/infuse_lsoa_lyr_2011.shp')
             geodf = geodf.loc[geodf['geo_code'].isin(esneftLSOA)]
             geodf = geodf.to_crs(epsg='4326')

@@ -47,10 +47,8 @@ def writeKey(path):
         fh.write(key)
 
 
-def readKey(key):
-    if key == cryptography.fernet.Fernet:
-        return key
-    with open(key, 'rb') as fh:
+def readKey(path):
+    with open(path, 'rb') as fh:
         key = fh.read()
     return Fernet(key)
 
@@ -73,8 +71,7 @@ def writeEncrypt(df, key, path=None):
             name = f'{col}-object'
             df.loc[df[col].isna(), col] = ''
         else:
-            print(f'Cannot encrypt column {col} with '
-                  f'dtype {dtype}.', file=sys.stderr)
+            logging.error(f'Cannot encrypt column {col} with dtype {dtype}.')
             continue
         if name.endswith('-dt'):
             df[name] = df[col].dt.strftime('%Y-%B-%d-%H-%M-%S')
@@ -103,7 +100,7 @@ def readEncrypt(path, key):
         col, dtype = name.rsplit('-', 1)
         if dtype == 'dt':
             df[col] = df[name].apply(
-                lambda x: pd.NaT if x == 'nan' else 
+                lambda x: pd.NaT if x == 'nan' else
                 datetime.strptime(x, '%Y-%B-%d-%H-%M-%S'))
         elif dtype == 'object':
             df[col] = df[name]
