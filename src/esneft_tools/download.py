@@ -487,23 +487,27 @@ class getData():
                 'Registered': int,
                 'Diabetes': int,
                 'QOF-DM': float,
+                'DM014-num': int,
+                'DM014-den': int,
                 'DM019-num': int,
                 'DM019-den': int,
                 'DM020-num': int,
                 'DM020-den': int,
             })
-            cols = [5, 10, 12, 17, 54, 59, 62, 67]
+            cols = [5, 10, 12, 17, 46, 51, 54, 59, 62, 67]
             self._verifyHash('qofDM', [f'{tmp}/data.xlsx'])
             qofDM = pd.read_excel(
                 f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
                 usecols=cols, skiprows=11, nrows=6470,
                 sheet_name='DM').set_index('OrganisationCode')
         qofDM['DM-prevalance'] = qofDM['Diabetes'] / qofDM['Registered']
+        qofDM['DM014-Ed'] = qofDM['DM014-num'] / qofDM['DM014-den']
         qofDM['DM019-BP'] = qofDM['DM019-num'] / qofDM['DM019-den']
         qofDM['DM020-HbA1c'] = qofDM['DM020-num'] / qofDM['DM020-den']
         qofDM = qofDM.drop(
-            ['Registered', 'Diabetes', 'DM019-num',
-             'DM019-den', 'DM020-num', 'DM020-den'], axis=1)
+            ['Registered', 'Diabetes', 'DM014-num',
+             'DM014-den', 'DM019-num', 'DM019-den',
+             'DM020-num', 'DM020-den'], axis=1)
         logger.info(f'Writing QOF data to {path}')
         qofDM.to_parquet(path)
         return qofDM

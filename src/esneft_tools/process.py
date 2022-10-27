@@ -70,32 +70,57 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
         .rename({0: 'Age (median)', 1: 'Population'}, axis=1))
     # Get GP registration by LSOA
     gpRegistrationByLSOA = gpRegistration.groupby('LSOA11CD')['Patient'].sum()
+    # Get number of GPs serving proportion of population
+    gpDensity = (gpRegistration
+        .groupby('LSOA11CD')['Patient']
+        .apply(_getGPthreshold, 0.9)
+        .rename('GPservices'))
     # Extract LSOA Name
     lsoaName = (
         postcodeLSOA.reset_index(drop=True)
         .set_index('LSOA11CD')['LSOA11NM'].drop_duplicates())
     summary = pd.concat([
         lsoaName, populationLSOA, areaLSOA,
-        gpRegistrationByLSOA, imdLSOA[iod_cols]], axis=1)
+        gpRegistrationByLSOA, gpDensity,
+        imdLSOA[iod_cols]], axis=1)
     cutter = pd.qcut if quantile else pd.cut
     name = 'q' if quantile else 'i'
     for col in iod_cols:
         summary[f'{col} ({name}{bins})'] = cutter(
             summary[col], bins, labels=list(range(bins, 0, -1)))
-    summary['DM-prevalance'] = _getLSOAprevalence(gpRegistration, qofDM)
+    summary['DM-prevalance'] = _getLSOAweightedMean(
+        gpRegistration, qofDM, gp_col='OrganisationCode',
+        score_col='DM-prevalance', weight_col='Patient')
+    summary['DM-QOF'] = _getLSOAweightedMean(
+        gpRegistration, qofDM, gp_col='OrganisationCode',
+        score_col='QOF-DM', weight_col='Patient')
+    summary['DM-Education'] = _getLSOAweightedMean(
+        gpRegistration, qofDM, gp_col='OrganisationCode',
+        score_col='DM014-Ed', weight_col='Patient')
+    summary['DM-BP'] = _getLSOAweightedMean(
+        gpRegistration, qofDM, gp_col='OrganisationCode',
+        score_col='DM019-BP', weight_col='Patient')
+    summary['DM-HbA1c'] = _getLSOAweightedMean(
+        gpRegistration, qofDM, gp_col='OrganisationCode',
+        score_col='DM020-HbA1c', weight_col='Patient')
     summary['Density'] = summary['Population'] / summary['LandHectare']
     summary['ESNEFT'] = summary.index.isin(esneftLSOA)
     return summary
 
 
-def _getLSOAprevalence(gpRegistration, qofDM):
+def _getGPthreshold(x, threshold=0.9):
+    cumprop = x.sort_values(ascending=False).cumsum() / x.sum()
+    return (cumprop < threshold).sum() + 1
+
+
+def _getLSOAweightedMean(gpRegistration, df, gp_col, score_col, weight_col):
     """ Compute LSOA prevalence by weighted mean across GP """
     gpTmp = pd.merge(
-        gpRegistration, qofDM,
-        left_on='OrganisationCode', right_index=True)
+        gpRegistration, df,
+        left_on=gp_col, right_index=True)
     prevalance = (
         gpTmp.groupby('LSOA11CD')
-        .apply(lambda x: np.average(x['DM-prevalance'], weights=x['Patient'])))
+        .apply(lambda x: np.average(x[score_col], weights=x[weight_col])))
     return prevalance
 
 
