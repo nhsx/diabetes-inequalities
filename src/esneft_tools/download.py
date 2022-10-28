@@ -46,6 +46,7 @@ class getData():
             'postcodeLSOA': 'postcode-lsoa.parquet',
             'imdLSOA': 'imd-statistics.parquet',
             'populationLSOA': 'population-lsoa.parquet',
+            'ethnicityLSOA': 'ethnicity-lsoa.parquet',
             'areaLSOA': 'land-area-lsoa.parquet',
             'gpRegistration': 'gp-registrations.parquet',
             'gpPractice': 'gp-practices.parquet',
@@ -68,12 +69,13 @@ class getData():
             'postcodeLatLong': '1a57720e30f3c7e0843b14e3c4e9a0f8f6dba43714b02dfebf1adacbe0063bd8',
             'imdLSOA': 'af86bf505d9174a65cc87eb9ad97b85b2b53bf481d0e75c7cf41aa5645622aa2',
             'populationLSOA': '42cae583caf558be7aa285c94141c9d3151e3b4b66a15499e4fbf2d114d6ae36',
+            'ethnicityLSOA': 'a9b84a525db2141742721a3669709ff451df049283f2df09ed86d1a1183fbe97',
             'areaLSOA': '7f97767f8142754b81a6c8a0722d3d104a89e1a4c72276eb1dc00e06ebbca3ff',
             'gpRegistration': '920beffa35cba1d2cdcd879603cd886c337d550961048f3c13e2ac8d6e4cf8c2',
             'gpPractice': '3584ac0f169747f6a7486983a593db825703f947d7e63af004936abd354c0e93',
             'gpStaff': 'ffacd0da1b8b5c04aa0a1d96587e561438c54d61d8616507af14c6b11bc7d29e',
             'qofDM': 'c4e76d342125acbcc852549b3571afac5fa0299ffb48274b6339158cc4ede3c2',
-            'geoLSOA': '608783e31e588706ca3215768fa6df6f08e88e1a51101a82f5587e52c483399f'
+            'geoLSOA': '608783e31e588706ca3215768fa6df6f08e88e1a51101a82f5587e52c483399f',
         })
 
 
@@ -137,6 +139,7 @@ class getData():
             'postcodeLSOA': self._sourceLSOA,
             'imdLSOA': self._sourceIMD,
             'populationLSOA': self._sourcePopulation,
+            'ethnicityLSOA': self._sourceEthnicity,
             'areaLSOA': self._sourceArea,
             'gpRegistration': self._sourceGPregistration,
             'gpPractice': self._sourceGPpractice,
@@ -305,6 +308,35 @@ class getData():
             ])
         populationLSOA.to_parquet(path)
         return populationLSOA
+
+
+    def _sourceEthnicity(self):
+        url = ('https://www.nomisweb.co.uk/api/v01/dataset/NM_522_1.data.csv'
+               '?date=latest&geography=1249902593...1249937345&rural_urban=0&'
+               'c_ethnicid=100,200,300,400,500&measures=20100')
+        path = self._getSourcePath('ethnicityLSOA')
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.csv')
+            self._verifyHash('ethnicityLSOA', [f'{tmp}/data.csv'])
+            dtype = {'LSOA11CD': str, 'Ethnicity': str, 'Count': int}
+            cols = [8, 19, 26]
+            ethnicityLSOA = pd.read_csv(
+                f'{tmp}/data.csv', usecols=cols,
+                names=dtype.keys(), dtype=dtype, skiprows=1)
+        ethnicityLSOA = (
+                ethnicityLSOA.groupby('LSOA11CD')
+                .apply(self._getEthnicMinority)
+                .rename('EthnicMinority')
+                .to_frame())
+        ethnicityLSOA.to_parquet(path)
+        return ethnicityLSOA
+
+
+    def _getEthnicMinority(self, x):
+        """ Get proportion of non-white residents """
+        total = x['Count'].sum()
+        nonwhite = x.loc[x['Ethnicity'] != 'White', 'Count'].sum()
+        return nonwhite / total
 
 
     def _processPopulationSheet(self, path: str, sex: str):

@@ -60,8 +60,9 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
 
 
 def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
-                   areaLSOA, esneftLSOA, qofDM, iod_cols: list = None,
-                   bins: int = 5, quantile: bool = True, **kwargs):
+                   ethnicityLSOA, areaLSOA, esneftLSOA, qofDM,
+                   iod_cols: list = None, bins: int = 5,
+                   quantile: bool = True, **kwargs):
     """ Return summary statistics per LSOA """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     populationLSOA = (
@@ -80,8 +81,8 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
         postcodeLSOA.reset_index(drop=True)
         .set_index('LSOA11CD')['LSOA11NM'].drop_duplicates())
     summary = pd.concat([
-        lsoaName, populationLSOA, areaLSOA,
-        gpRegistrationByLSOA, gpDensity,
+        lsoaName, populationLSOA, ethnicityLSOA,
+        areaLSOA, gpRegistrationByLSOA, gpDensity,
         imdLSOA[iod_cols]], axis=1)
     cutter = pd.qcut if quantile else pd.cut
     name = 'q' if quantile else 'i'
