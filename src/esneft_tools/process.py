@@ -65,6 +65,9 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
                    quantile: bool = True, **kwargs):
     """ Return summary statistics per LSOA """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
+    maleProp = (
+        populationLSOA.groupby('LSOA11CD')
+        .apply(_getSexRatio).rename('MaleProp'))
     populationLSOA = (
         populationLSOA.groupby('LSOA11CD')
         .apply(_summarisePopulation)
@@ -81,7 +84,7 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
         postcodeLSOA.reset_index(drop=True)
         .set_index('LSOA11CD')['LSOA11NM'].drop_duplicates())
     summary = pd.concat([
-        lsoaName, populationLSOA, ethnicityLSOA,
+        lsoaName, populationLSOA, maleProp, ethnicityLSOA,
         areaLSOA, gpRegistrationByLSOA, gpDensity,
         imdLSOA[iod_cols]], axis=1)
     cutter = pd.qcut if quantile else pd.cut
@@ -109,6 +112,13 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
     return summary
 
 
+def _getSexRatio(x):
+    """ Get proportion of male residents """
+    total = x['Population'].sum()
+    male = x.loc[x['Sex'] != 'Male', 'Population'].sum()
+    return male / total
+
+
 def _getGPthreshold(x, threshold=0.9):
     cumprop = x.sort_values(ascending=False).cumsum() / x.sum()
     return (cumprop < threshold).sum() + 1
@@ -119,6 +129,7 @@ def _getLSOAweightedMean(gpRegistration, df, gp_col, score_col, weight_col):
     gpTmp = pd.merge(
         gpRegistration, df,
         left_on=gp_col, right_index=True)
+    gpTmp = gpTmp.loc[gpTmp[weight_col] > 0]
     prevalance = (
         gpTmp.groupby('LSOA11CD')
         .apply(lambda x: np.average(x[score_col], weights=x[weight_col])))
