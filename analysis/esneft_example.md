@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.14.0
+      jupytext_version: 1.14.1
   kernelspec:
     display_name: Python 3 (ipykernel)
     language: python
@@ -22,6 +22,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
+from pingouin import partial_corr
 from esneft_tools.utils import setVerbosity, formatP
 from esneft_tools import download, process, visualise
 
@@ -37,7 +38,27 @@ data = dataDownloader.fromHost('all')
 ```
 
 ```python
-GPsummary = process.getGPsummary(**data, iod_cols='IMD')
+data['qof'] = dataDownloader.fromSource('qof')
+```
+
+```python
+deprivationCols = ([
+    'IMD', 'Income', 'Employment', 'Education', 'Health', 'Crime',
+    'Barriers (H&S)', 'Environment', 'IDACI', 'IDAOPI', 'YouthSubDomain',
+    'AdultSkills', 'Barriers (Geo)', 'Barriers (Wider)', 
+    'IndoorsSubDomain', 'OutdoorSubDomain'
+])
+```
+
+```python
+GPsummary = process.getGPsummary(**data, iod_cols=deprivationCols)
+```
+
+```python
+bins = 5
+quantile = True
+name = f'q{bins}' if quantile else f'i{bins}'
+LSOAsummary = process.getLSOAsummary(**data, iod_cols=deprivationCols, bins=bins, quantile=True).dropna()
 ```
 
 ```python
@@ -72,24 +93,67 @@ fig.write_image('GP-locations.png')
 ```
 
 ```python
-bins = 5
-quantile = True
-name = f'q{bins}' if quantile else f'i{bins}'
-LSOAsummary = process.getLSOAsummary(**data, iod_cols='IMD', bins=bins, quantile=True)#.dropna()
+deprivationCols = ([
+    'Income', 'Employment', 'Education',
+    'Health', 'Crime', 'Barriers (H&S)', 'Environment',
+])
+subDeprivation = ([
+    'YouthSubDomain', 'AdultSkills', 
+    'IndoorsSubDomain', 'OutdoorSubDomain'
+])
 ```
 
 ```python
-sns.histplot(data=LSOAsummary.dropna(), x='IMD', hue=f'IMD ({name})', stat='probability')
+demographics = ['Age (median)', 'EthnicMinority', 'MaleProp']
+allData = []
+diseases = [i for i in LSOAsummary.columns if i.endswith('prevalance')]
+allFeatures = deprivationCols + demographics
+for disease in diseases:
+    parcorr = []
+    for target in allFeatures + subDeprivation:
+        if target in ['YouthSubDomain', 'AdultSkills']:
+            covars = [i for i in allFeatures if i != 'Education']
+        elif target in ['IndoorsSubDomain', 'OutdoorSubDomain']:
+            covars = [i for i in allFeatures if i != 'Environment']
+        else:
+            covars = [i for i in allFeatures if i != target]
+        corr = partial_corr(
+            data=LSOAsummary, x=target, y=disease, 
+            covar=covars, method='spearman')
+        corr.index = [target]
+        parcorr.append(corr)
+    parcorr = pd.concat(parcorr).sort_values('r', ascending=False)['r'].rename(disease.split('-')[0])
+    allData.append(parcorr)
+allData = pd.concat(allData, axis=1)
+order = allData.mean(axis=1).sort_values(ascending=False)
+allData = allData.reindex(order.index)
+(
+    allData.loc[allData.index.isin(allFeatures)]
+    .style.background_gradient(vmin=-1, vmax=1, cmap='bwr', axis=None)
+    .format(precision=1)
+)
 ```
 
 ```python
-df = LSOAsummary[['Age (median)', f'IMD ({name})', 'DM-prevalance', 'Population']].dropna().copy()
+(
+    allData.loc[allData.index.isin(subDeprivation)]
+    .style.background_gradient(vmin=-1, vmax=1, cmap='bwr', axis=None)
+    .format(precision=1)
+)
+```
+
+```python
+deprivation = 'IMD'
+```
+
+```python
+df = LSOAsummary[['Age (median)', f'{deprivation} ({name})', 'DM-prevalance', 'Population']].dropna().copy()
 df['Age'] = pd.qcut(df['Age (median)'], 10)
 table = (
-    df.groupby(['Age', f'IMD ({name})'])
+    df.groupby(['Age', f'{deprivation} ({name})'])
     .apply(lambda x: (np.average(x['DM-prevalance'], weights=x['Population'])) * 100_000)
     .reset_index()
-    .pivot(index='Age', columns=f'IMD ({name})')
+    .pivot(index='Age', columns=f'{deprivation} ({name})')
     .droplevel(0, axis=1)
 )
 fig, ax = plt.subplots()
@@ -99,29 +163,20 @@ fig.tight_layout()
 ```
 
 ```python
-sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', y='IMD', fill=True)
+sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', y=deprivation, fill=True)
 ```
 
 ```python
 fig, ax = plt.subplots()
-sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', hue=f'IMD ({name})', ax=ax)
+sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', hue=f'{deprivation} ({name})', ax=ax)
 fig.tight_layout()
 fig.savefig('age-by-imd.png', dpi=300)
 ```
 
 ```python
-prevalance_age_adj = (
-    table.apply(
-        lambda x: np.average(x, weights=df.groupby('Age')['Population'].sum()))
-    .reset_index()
-)
-sns.barplot(data=prevalance_age_adj, x='IMD (q5)', y=0)
-```
-
-```python
 prev_by_imd = sns.lmplot(
     data=LSOAsummary.dropna(), x='Age (median)', 
-    y='DM-prevalance', hue=f'IMD ({name})', scatter=False)
+    y='DM-prevalance', hue=f'{deprivation} ({name})', scatter=False)
 prev_by_imd.savefig('prevalance-by-age_imd.png', dpi=300)
 ```
 
