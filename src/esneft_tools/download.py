@@ -51,7 +51,7 @@ class getData():
             'gpRegistration': 'gp-registrations.parquet',
             'gpPractice': 'gp-practices.parquet',
             'gpStaff': 'gp-staff.parquet',
-            'qofDM': 'qof-dm.parquet',
+            'qof': 'qof.parquet',
             'esneftLSOA': 'lsoa-esneft.json',
             'geoLSOA': 'lsoa-map-esneft.geojson',
             'esneftOSM': 'esneft-highways.osm.gz'
@@ -74,7 +74,11 @@ class getData():
             'gpRegistration': '920beffa35cba1d2cdcd879603cd886c337d550961048f3c13e2ac8d6e4cf8c2',
             'gpPractice': '3584ac0f169747f6a7486983a593db825703f947d7e63af004936abd354c0e93',
             'gpStaff': 'ffacd0da1b8b5c04aa0a1d96587e561438c54d61d8616507af14c6b11bc7d29e',
-            'qofDM': 'c4e76d342125acbcc852549b3571afac5fa0299ffb48274b6339158cc4ede3c2',
+            'qofHD': 'c4e76d342125acbcc852549b3571afac5fa0299ffb48274b6339158cc4ede3c2',
+            'qofCV': '479669a5f1607d788b4c6c7bed19a110e6ff34be9ae23c74ca2b8243604ac25e',
+            'qofRES': '172c9d448f1813faedd96a426869af435dc0c0cbe09a3b4ad75ff931ea0f7ecc',
+            'qofLS': '080a1351988ad659cc17fcc18286854df888551fa1ecd7168e2ed1d7332e3352',
+            'qofMH': '7d66a77d953befa8c955de03a90e6e3e6f4ecebfe5f727ed70a381c9d4e47f54',
             'geoLSOA': '608783e31e588706ca3215768fa6df6f08e88e1a51101a82f5587e52c483399f',
         })
 
@@ -144,7 +148,7 @@ class getData():
             'gpRegistration': self._sourceGPregistration,
             'gpPractice': self._sourceGPpractice,
             'gpStaff': self._sourceGPstaff,
-            'qofDM': self._sourceQOF,
+            'qof': self._sourceQOF,
             'geoLSOA': self._sourceMap,
         })
         data = sourceMap[name]()
@@ -508,41 +512,184 @@ class getData():
 
 
     def _sourceQOF(self):
+        path = self._getSourcePath('qof')
+        qof = pd.concat([
+            self._sourceQOFhd(), self._sourceQOFcv(),
+            self._sourceQOFres(), self._sourceQOFls(),
+            self._sourceQOFmh()], axis=1)
+        logger.info(f'Writing QOF data to {path}')
+        qof.to_parquet(path)
+        return qof
+
+
+    def _sourceQOFhd(self):
         url = ('https://files.digital.nhs.uk/8A/57C8D5/'
                'qof-2122-prev-ach-pca-hd-prac.xlsx')
-        logger.info(f'Downloading QOF 2020/2021 DM data from {url}')
-        path = self._getSourcePath('qofDM')
+        logger.info(f'Downloading QOF 2020/2021 High Dep data from {url}')
+        qofHD = []
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.xlsx')
-            names = ({
-                'OrganisationCode': str,
-                'Registered': int,
-                'Diabetes': int,
-                'QOF-DM': float,
-                'DM014-num': int,
-                'DM014-den': int,
-                'DM019-num': int,
-                'DM019-den': int,
-                'DM020-num': int,
-                'DM020-den': int,
-            })
-            cols = [5, 10, 12, 17, 46, 51, 54, 59, 62, 67]
-            self._verifyHash('qofDM', [f'{tmp}/data.xlsx'])
-            qofDM = pd.read_excel(
-                f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
-                usecols=cols, skiprows=11, nrows=6470,
-                sheet_name='DM').set_index('OrganisationCode')
-        qofDM['DM-prevalance'] = qofDM['Diabetes'] / qofDM['Registered']
-        qofDM['DM014-Ed'] = qofDM['DM014-num'] / qofDM['DM014-den']
-        qofDM['DM019-BP'] = qofDM['DM019-num'] / qofDM['DM019-den']
-        qofDM['DM020-HbA1c'] = qofDM['DM020-num'] / qofDM['DM020-den']
-        qofDM = qofDM.drop(
-            ['Registered', 'Diabetes', 'DM014-num',
-             'DM014-den', 'DM019-num', 'DM019-den',
-             'DM020-num', 'DM020-den'], axis=1)
-        logger.info(f'Writing QOF data to {path}')
-        qofDM.to_parquet(path)
-        return qofDM
+            self._verifyHash('qofHD', [f'{tmp}/data.xlsx'])
+            for sheet in ['DM', 'CAN', 'CKD', 'NDH', 'PC']:
+                names = ({
+                    'OrganisationCode': str,
+                    'Registered': int,
+                    sheet: int,
+                })
+                cols = [5] + self._QOFsheet(sheet)
+                if sheet == 'DM':
+                    extra = ({
+                        'QOF-DM': float,
+                        'DM019-num': int, 'DM019-den': int,
+                        'DM020-num': int, 'DM020-den': int,
+                    })
+                    names = {**names, **extra}
+                    cols += [17, 54, 59, 62, 67]
+                qof = pd.read_excel(
+                    f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
+                    usecols=cols, skiprows=11, nrows=6470,
+                    sheet_name=sheet).set_index('OrganisationCode')
+                qof[f'{sheet}-prevalance'] = qof[sheet] / qof['Registered']
+                if sheet == 'DM':
+                    qof['DM019-BP'] = qof['DM019-num'] / qof['DM019-den']
+                    qof['DM020-HbA1c'] = qof['DM020-num'] / qof['DM020-den']
+                    colAppend = ([
+                        'QOF-DM', 'DM019-BP', 'DM020-HbA1c',
+                        f'{sheet}-prevalance'
+                    ])
+                else:
+                    colAppend = f'{sheet}-prevalance'
+                qofHD.append(qof[colAppend])
+        qofHD = pd.concat(qofHD, axis=1)
+        return qofHD
+
+
+    def _sourceQOFcv(self):
+        url = ('https://files.digital.nhs.uk/64/72639B/'
+               'qof-2122-prev-ach-pca-cv-prac.xlsx')
+        logger.info(f'Downloading QOF 2020/2021 CV data from {url}')
+        qofCV = []
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.xlsx')
+            self._verifyHash('qofCV', [f'{tmp}/data.xlsx'])
+            for sheet in ['AF', 'CHD', 'HF', 'HYP', 'LVSD', 'PAD', 'STIA']:
+                names = ({
+                    'OrganisationCode': str,
+                    'Registered': int,
+                    sheet: int,
+                })
+                cols = [5] + self._QOFsheet(sheet)
+                qof = pd.read_excel(
+                    f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
+                    usecols=cols, skiprows=11, nrows=6470,
+                    sheet_name=sheet).set_index('OrganisationCode')
+                qof[f'{sheet}-prevalance'] = qof[sheet] / qof['Registered']
+                qofCV.append(qof[f'{sheet}-prevalance'])
+        qofCV = pd.concat(qofCV, axis=1)
+        return qofCV
+
+
+    def _sourceQOFres(self):
+        url = ('https://files.digital.nhs.uk/74/5A4200/'
+               'qof-2122-prev-ach-pca-resp-prac.xlsx')
+        logger.info(f'Downloading QOF 2020/2021 Res data from {url}')
+        qofRes = []
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.xlsx')
+            self._verifyHash('qofRES', [f'{tmp}/data.xlsx'])
+            for sheet in ['AST', 'COPD']:
+                names = ({
+                    'OrganisationCode': str,
+                    'Registered': int,
+                    sheet: int,
+                })
+                cols = [5] + self._QOFsheet(sheet)
+                qof = pd.read_excel(
+                    f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
+                    usecols=cols, skiprows=11, nrows=6470,
+                    sheet_name=sheet).set_index('OrganisationCode')
+                qof[f'{sheet}-prevalance'] = qof[sheet] / qof['Registered']
+                qofRes.append(qof[f'{sheet}-prevalance'])
+        qofRes = pd.concat(qofRes, axis=1)
+        return qofRes
+
+
+    def _sourceQOFls(self):
+        url = ('https://files.digital.nhs.uk/11/664041/'
+               'qof-2122-prev-ach-pca-ls-prac.xlsx')
+        logger.info(f'Downloading QOF 2020/2021 LS data from {url}')
+        qofLS = []
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.xlsx')
+            self._verifyHash('qofLS', [f'{tmp}/data.xlsx'])
+            for sheet in ['OB', 'SMOK']:
+                names = ({
+                    'OrganisationCode': str,
+                    'Registered': int,
+                    sheet: int,
+                })
+                cols = [5] + self._QOFsheet(sheet)
+                qof = pd.read_excel(
+                    f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
+                    usecols=cols, skiprows=11, nrows=6470,
+                    sheet_name=sheet).set_index('OrganisationCode')
+                qof[f'{sheet}-prevalance'] = qof[sheet] / qof['Registered']
+                qofLS.append(qof[f'{sheet}-prevalance'])
+        qofLS = pd.concat(qofLS, axis=1)
+        return qofLS
+
+
+    def _sourceQOFmh(self):
+        url = ('https://files.digital.nhs.uk/67/C2C611/'
+               'qof-2122-prev-ach-pca-neu-prac.xlsx')
+        logger.info(f'Downloading QOF 2020/2021 MH data from {url}')
+        qofMH = []
+        with tempfile.TemporaryDirectory() as tmp:
+            urllib.request.urlretrieve(url, f'{tmp}/data.xlsx')
+            self._verifyHash('qofMH', [f'{tmp}/data.xlsx'])
+            for sheet in ['DEM', 'DEP', 'EP', 'LD', 'MH']:
+                names = ({
+                    'OrganisationCode': str,
+                    'Registered': int,
+                    sheet: int,
+                })
+                cols = [5] + self._QOFsheet(sheet)
+                qof = pd.read_excel(
+                    f'{tmp}/data.xlsx', names=names.keys(), dtype=names,
+                    usecols=cols, skiprows=11, nrows=6470,
+                    sheet_name=sheet).set_index('OrganisationCode')
+                qof[f'{sheet}-prevalance'] = qof[sheet] / qof['Registered']
+                qofMH.append(qof[f'{sheet}-prevalance'])
+        qofMH = pd.concat(qofMH, axis=1)
+        return qofMH
+
+
+    def _QOFsheet(self, name):
+        """ Map list size and prevalance columns to QOF sheet """
+        qof = ({
+            'DEM': [10, 11],
+            'DEP': [10, 11],
+            'EP': [10, 11],
+            'LD': [10, 11],
+            'MH': [10, 11],
+            'CAN': [10, 11],
+            'CKD': [10, 11],
+            'DM': [10, 12],
+            'NDH': [10, 11],
+            'PC': [10, 11],
+            'OB': [10, 11],
+            'SMOK': [8, 35],
+            'AST': [10, 12],
+            'COPD': [10, 11],
+            'AF': [10, 11],
+            'CHD': [10, 13],
+            'HF': [10, 11],
+            'HYP': [10, 13],
+            'LVSD': [10, 11],
+            'PAD': [10, 11],
+            'STIA': [10, 13]
+        })
+        return qof[name]
 
 
     def _sourceMap(self):

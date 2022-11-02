@@ -35,7 +35,7 @@ def _parseIoDcols(imd: pd.DataFrame, iod_cols: list = None):
 
 def getGPsummary(gpRegistration, gpPractice, gpStaff,
                  postcodeLSOA, imdLSOA, esneftOSM,
-                 qofDM, iod_cols: list = None, **kwargs):
+                 qof, iod_cols: list = None, **kwargs):
     """ Compute mean IoD per GP practice weighted by patient population """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     summary = (pd
@@ -45,7 +45,7 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
         .apply(_weightedMean, iod_cols))
     summary['Patient'] = (
         gpRegistration.groupby('OrganisationCode')['Patient'].sum())
-    summary = pd.concat([summary, qofDM, gpPractice, gpStaff], axis=1)
+    summary = pd.concat([summary, qof, gpPractice, gpStaff], axis=1)
     summary = pd.merge(
         summary, postcodeLSOA[['Lat', 'Long']], left_on='PCDS',
         right_index=True, how='left')
@@ -60,7 +60,7 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
 
 
 def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
-                   ethnicityLSOA, areaLSOA, esneftLSOA, qofDM,
+                   ethnicityLSOA, areaLSOA, esneftLSOA, qof,
                    iod_cols: list = None, bins: int = 5,
                    quantile: bool = True, **kwargs):
     """ Return summary statistics per LSOA """
@@ -92,20 +92,20 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
     for col in iod_cols:
         summary[f'{col} ({name}{bins})'] = cutter(
             summary[col], bins, labels=list(range(bins, 0, -1)))
-    summary['DM-prevalance'] = _getLSOAweightedMean(
-        gpRegistration, qofDM, gp_col='OrganisationCode',
-        score_col='DM-prevalance', weight_col='Patient')
+    diseases = [c for c in qof.columns if c.endswith('-prevalance')]
+    for disease in diseases:
+        logger.info(f'Processing {disease}.')
+        summary[disease] = _getLSOAweightedMean(
+            gpRegistration, qof, gp_col='OrganisationCode',
+            score_col=disease, weight_col='Patient')
     summary['DM-QOF'] = _getLSOAweightedMean(
-        gpRegistration, qofDM, gp_col='OrganisationCode',
+        gpRegistration, qof, gp_col='OrganisationCode',
         score_col='QOF-DM', weight_col='Patient')
-    summary['DM-Education'] = _getLSOAweightedMean(
-        gpRegistration, qofDM, gp_col='OrganisationCode',
-        score_col='DM014-Ed', weight_col='Patient')
     summary['DM-BP'] = _getLSOAweightedMean(
-        gpRegistration, qofDM, gp_col='OrganisationCode',
+        gpRegistration, qof, gp_col='OrganisationCode',
         score_col='DM019-BP', weight_col='Patient')
     summary['DM-HbA1c'] = _getLSOAweightedMean(
-        gpRegistration, qofDM, gp_col='OrganisationCode',
+        gpRegistration, qof, gp_col='OrganisationCode',
         score_col='DM020-HbA1c', weight_col='Patient')
     summary['Density'] = summary['Population'] / summary['LandHectare']
     summary['ESNEFT'] = summary.index.isin(esneftLSOA)
