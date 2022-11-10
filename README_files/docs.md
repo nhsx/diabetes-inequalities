@@ -40,7 +40,7 @@ fig.show()
 
 
 ### Event Frequency Timeline
-The `process.summariseTime` function accept data processed by `process.prepTime`.
+The `process.summariseTime` function accepts data processed by `process.prepTime`.
 It computes event frequency at set intervals.
 Frequency is scaled to 1 and may be normalised within each group, or across the entire dataset.
 
