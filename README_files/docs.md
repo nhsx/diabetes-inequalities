@@ -4,14 +4,21 @@
 
 **Note: This documentation is still a work progress and will be updated.**
 
+## Table of contents
 
+  * [Timeline Visualisation](#timeline-visualisation)
+  * [Healthcare Accessibility](#healthcare-accessibility)
+    * [Compute Travel Distance](#compute-travel-distance)
+    * [Plot Travel Distance](#plot-travel-distance)
+
+
+## Timeline Visualisation
+Basic functionality is included to visualise events on a timeline.
 ```python
 import pandas as pd
 from esneft_tools import synthetic, process, visualise
 ```
 
-## Timeline Visualisation
-Basic functionality is included to visualise events on a timeline.
 
 ### Event Level Timeline (theograph)
 The `process.prepTime` function take event-level data in long-format and prepares it for visualisation.
@@ -55,3 +62,36 @@ fig.show()
 ```
 ![pt-time](./service-density.png)
  <br> *Example of event-frequency timeline using synthetic data*
+
+
+### Healthcare Accessibility
+**Note: This functionality requires OSMnx installation**
+
+#### Compute Travel Distance
+The `computeTravelDistance` function uses `OSMNX` to compute the minimum distance to the nearest healthcare service (e.g. GP practice) from any point in the ESNEFT region.
+
+```python
+activeGP = GPsummary.loc[
+      (GPsummary['Status'] == 'Active')
+    & (GPsummary['PrescribingSetting'] == 'GP Practice')
+].copy()
+
+distances = process.computeTravelDistance(
+    data['esneftOSM'], activeGP, maxQuant=0.99)
+```
+
+| Field    | Description                                      |
+| ---      | ---                                              |
+| *Node*   | OSM Map Node                                     |
+| Distance | Distances by Road (metres) to Nearest Service(s) |
+| SiteIDs  | Practise Service Code(s) of Nearest Services     |
+
+
+#### Plot Travel Distance
+```python
+fig, ax = visualise.plotTravelTime(
+    data['esneftOSM'], distances, maxQuant=0.95, out='GP-accessibility.png')
+```
+
+![gp-loc](./GP-accessibility.png)
+<br> *Heat map visualising distance to nearest GP Practice within ESNEFT*

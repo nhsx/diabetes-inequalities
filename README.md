@@ -18,8 +18,6 @@
   * [Visualise](#visualise)
     * [Practice Map](#practice-map)
     * [LSOA Map](#lsoa-map)
-    * [Healthcare Accessibility](#healthcare-accessibility)
-      * [Compute Travel Time](#compute-travel-time)
   * [Further Documentation](#additional-documentation)
   * [License](#license)
   * [Contact](#contact)
@@ -212,40 +210,6 @@ fig.write_image('LSOA-choropleth.png')
 
 ![gp-loc](./README_files/LSOA-choropleth.png)
  <br> *Choropleth Map of LSOA Domains within ESNEFT coloured by IMD (Plotly Interactive)*
-
-
-### Healthcare Accessibility
- **Note: This functionality requires OSMnx installation**
-
-
-#### Compute Travel Distance
-The `computeTravelDistance` function uses `OSMNX` to compute the minimum distance to the nearest healthcare service (e.g. GP practice) from any point in the ESNEFT region.
-
-```python
-activeGP = GPsummary.loc[
-   (GPsummary['Status'] == 'Active')
- & (GPsummary['PrescribingSetting'] == 'GP Practice')
-].copy()
-
- distances = process.computeTravelDistance(data['esneftOSM'], activeGP, maxQuant=0.99)
- ```
-
- | Field    | Description                                      |
- | ---      | ---                                              |
- | *Node*   | OSM Map Node                                     |
- | Distance | Distances by Road (metres) to Nearest Service(s) |
- | SiteIDs  | Practise Service Code(s) of Nearest Services     |
-
-
-
-#### Plot Travel Distance
-```python
-fig, ax = visualise.plotTravelTime(
-    data['esneftOSM'], distances, maxQuant=0.95, out='GP-accessibility.png')
-```
-
-![gp-loc](./README_files/GP-accessibility.png)
- <br> *Heat map visualising distance to nearest GP Practice within ESNEFT*
 
 
 ## Further Documentation
