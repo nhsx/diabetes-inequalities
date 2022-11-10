@@ -28,14 +28,15 @@ def emergency(size: int = 10_000, seed: int = 42):
     postcodes = getData.fromHost('postcodeLSOA')
     esneftLSOA = getData.fromHost('esneftLSOA')
     postcodes = postcodes[postcodes.isin(esneftLSOA)].index
-
+    # Define fewer patients then entries
+    nPatients = int(size*0.61) if size > 1 else 1
     inc1 = datetime.strptime('1/1/2018', '%d/%m/%Y')
 
     data = pd.DataFrame({
         'site': np.random.choice(
             ['Ipswich', 'Colchester'], size=size, p=[0.52, 0.48]),
         'AEDid': range(size),
-        'patientID': np.random.choice(range(int(size*0.61)), size=size),
+        'patientID': np.random.choice(range(nPatients), size=size),
         'Age': np.random.randint(0, 100, size=size),
         'Sex': np.random.choice(
             ['Female', 'Male', 'Unknown'],
@@ -71,7 +72,8 @@ def emergency(size: int = 10_000, seed: int = 42):
         lambda x :np.datetime64('NaT') if np.random.random() < 0.05 else x)
     data['seen2DateTime'] = data.apply(
         lambda x : (np.datetime64('NaT') if (np.random.random() < 0.92
-                    or pd.isnull(x['seen1DateTime'])) else x), axis =1)
+                    or pd.isnull(x['seen1DateTime'])) else x['seen2DateTime']),
+                    axis = 1)
     data['fitDischargeDateTime'] = data['fitDischargeDateTime'].apply(
         lambda x :np.datetime64('NaT') if np.random.random() < 0.37 else x)
     return data

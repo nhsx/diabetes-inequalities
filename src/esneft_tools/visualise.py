@@ -111,9 +111,9 @@ def timeline(df: pd.DataFrame, colour='group'):
         order = df.groupby('group')['Freq.'].sum().sort_values().index
     else:
         fig = px.timeline(
-            df, x_start='start', x_end=df.columns[-1], y='group',
+            df, x_start='start', x_end='end', y='group',
             color=colour, hover_data=['group'])
-        order = None
+        order = df.groupby('group')['end'].max().sort_values().index
     fig.update_layout({
         'plot_bgcolor': 'rgba(0,0,0,0)',
         'yaxis_title': '',
