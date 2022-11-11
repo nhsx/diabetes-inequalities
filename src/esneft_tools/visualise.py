@@ -4,6 +4,7 @@ import sys
 import logging
 import matplotlib
 import numpy as np
+import pandas as pd
 import networkx as nx
 import plotly.express as px
 from collections import defaultdict
@@ -98,3 +99,34 @@ def plotTravelTime(
         node_alpha=alpha, figsize=figsize,
         save=(out is not None), dpi=dpi, filepath=out)
     return fig, ax
+
+
+def timeline(df: pd.DataFrame, colour='group'):
+    if 'Freq.' in df.columns:
+        fig = px.timeline(
+            df, x_start='start', x_end='end', y='group',
+            color='Freq.', range_color=(0, 1),
+            color_continuous_scale=px.colors.sequential.gray_r)
+        # Order groups by frequency
+        order = df.groupby('group')['Freq.'].sum().sort_values().index
+    else:
+        fig = px.timeline(
+            df, x_start='start', x_end='end', y='group',
+            color=colour, hover_data=['group'])
+        order = df.groupby('group')['end'].max().sort_values().index
+    fig.update_layout({
+        'plot_bgcolor': 'rgba(0,0,0,0)',
+        'yaxis_title': '',
+        'showlegend': False
+    })
+    fig.update_xaxes(
+        showline=True, linewidth=2, linecolor='black')
+    fig.update_yaxes(
+        showline=True, linewidth=2,
+        categoryarray=order, linecolor='black')
+    fig.update_layout(legend=dict(
+        orientation='h',
+        yanchor='top', y=-0.1,
+        xanchor='left', x=0.01
+    ))
+    return fig

@@ -185,3 +185,52 @@ def computeTravelDistance(G, locations, step=500, maxQuant=0.95):
     distances = pd.DataFrame.from_dict(
         distances, orient='index', columns=['Distance', 'SiteIDs'])
     return distances
+
+
+def prepTime(df, start, end=None, interval='1W', group=None, index=None):
+    """ Standardise timeline events data by group """
+    valid = [start] if end is None else [start, end]
+    df = df.loc[df[valid].notna().all(axis=1)].copy()
+    if group is None:
+        df['group'] = ''
+    else:
+        df['group'] = df[group].fillna('Unknown')
+    df['start'] = pd.to_datetime(df[start])
+    if end is None:
+        end = f'start+{interval}'
+        df[end] = df['start'] + pd.Timedelta(1)
+    df['start'] = df['start'].dt.to_period(interval).dt.start_time
+    df['end'] = (
+        pd.to_datetime(df[end]).dt.to_period(interval).dt.end_time
+        + pd.Timedelta(1)
+    )
+    cols = ['group', 'start', 'end']
+    if index is None:
+        drop = False # Save the pandas index column
+    else:
+        drop = True
+        cols.append(index)
+    return df[cols].reset_index(drop=drop)
+
+
+def summariseTime(df: pd.DataFrame, interval='1W', normByGroup: bool = False):
+    """ Compute normalised event frequency within constant time interval """
+    mergeFunc = lambda x: pd.date_range(x['start'], x['end'], freq=interval)
+    df = pd.merge(
+        df, df.apply(mergeFunc, axis=1).explode().rename('period'),
+        left_index=True, right_index=True)
+
+    df['period'] = df['period'].dt.to_period(interval)
+    groups = ['group', 'period']
+    df = df.groupby(groups).size().reset_index()
+
+    df['start'] = df['period'].dt.start_time
+    df['end'] = df['period'].dt.end_time + pd.Timedelta(1)
+
+    if normByGroup:
+        df['Freq.'] = df.groupby('group')[0].transform(lambda x: x / x.max())
+        order = None
+    else:
+        df['Freq.'] = df[0] / df[0].max()
+        order = df.groupby('group')['Freq.'].sum().sort_values().index
+    return df.drop(['period', 0], axis=1)
