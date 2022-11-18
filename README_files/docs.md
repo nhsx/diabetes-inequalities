@@ -76,8 +76,8 @@ activeGP = GPsummary.loc[
     & (GPsummary['PrescribingSetting'] == 'GP Practice')
 ].copy()
 
-distances = process.computeTravelDistance(
-    data['esneftOSM'], activeGP, maxQuant=0.99)
+distances, unchecked = process.computeTravelDistance(
+    data['esneftOSM'], activeGP, dist=20000)
 ```
 
 | Field    | Description                                      |

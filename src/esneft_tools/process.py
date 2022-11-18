@@ -151,7 +151,7 @@ def _checkInBounds(x, bounds):
     )
 
 
-def computeTravelDistance(G, locations, step=500, maxQuant=0.95):
+def computeTravelDistance(G, locations, dist=20000):
     fullBounds = ox.graph_to_gdfs(G, edges=False).total_bounds
     inBounds = locations.apply(_checkInBounds, args=(fullBounds,), axis=1)
     locations = locations.loc[inBounds].copy()
@@ -160,31 +160,21 @@ def computeTravelDistance(G, locations, step=500, maxQuant=0.95):
     nodeSites = (locations.groupby('Node').apply(
         lambda x: tuple(x.index)).to_dict())
     checked = set()
-    dist = 0
-    while True:
-        dist += step
-        for i, refNode in enumerate(locations['Node'].unique()):
-            sites = tuple(locations.loc[locations['Node'] == refNode].index)
-            subgraph = nx.ego_graph(G, refNode, radius=dist, distance='length')
-            for node in subgraph.nodes():
-                if node in checked:
-                    continue
-                try:
-                    distance = nx.shortest_path_length(
-                        G, node, refNode, weight='length', method='dijkstra')
-                    if distance < distances[node][0]:
-                        distances[node] = (distance, nodeSites[refNode])
-                except nx.NetworkXNoPath:
-                    pass
-            checked.update(set(subgraph.nodes()))
-        step += (step // 2)
-        completion = len(checked) / len(G.nodes())
-        logger.info(f'{completion:.1%} complete, distances = {dist}')
-        if completion >= maxQuant:
-            break
+    for i, refNode in enumerate(locations['Node'].unique()):
+        subgraph = nx.ego_graph(G, refNode, radius=dist, distance='length')
+        allShortest = nx.shortest_path_length(
+            subgraph, refNode, weight='length', method='dijkstra')
+        for node, distance in allShortest.items():
+            if distance < distances[node][0]:
+                distances[node] = (distance, nodeSites[refNode])
+        checked.update(set(subgraph.nodes()))
+    completion = len(checked) / len(G.nodes())
+    unchecked = set(G.nodes()) - checked
+    logger.info(
+        f'{completion:.1%} complete, {len(unchecked)} nodes > {dist} away.')
     distances = pd.DataFrame.from_dict(
         distances, orient='index', columns=['Distance', 'SiteIDs'])
-    return distances
+    return distances, unchecked
 
 
 def prepTime(df, start, end=None, interval='1W', group=None, index=None):
