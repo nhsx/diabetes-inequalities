@@ -5,6 +5,7 @@ import sys
 import json
 import glob
 import gzip
+import yaml
 import hashlib
 import zipfile
 import logging
@@ -38,7 +39,7 @@ except ModuleNotFoundError:
 
 class getData():
 
-    def __init__(self, cache: str = './.data-cache'):
+    def __init__(self, sourceURL: str = None, cache: str = './.data-cache'):
         self.cache = cache
         self.host = ('https://raw.githubusercontent.com/'
                      'StephenRicher/nhsx-internship/main/data/')
@@ -60,13 +61,50 @@ class getData():
         self.osmnx = 'osmnx' in sys.modules
         os.makedirs(self.cache , exist_ok=True)
         logger.info(f'Retrieved files will be cached to {self.cache}')
+        # Modify default links if provided
+        if sourceURL is not None:
+            sourceURL = self.readSourceURL(sourceURL)
+            for name, url in sourceURL.items():
+                if name not in self.sourceURL:
+                    continue
+                logger.info(f'Updating URL for {name} to {url}')
+                self.sourceURL[name] = url
+
+
+    def readSourceURL(self, path: str) -> dict:
+        with open(path, 'r') as stream:
+            try:
+                return yaml.safe_load(stream)
+            except yaml.YAMLError as exc:
+                logger.error(exc)
+                return None
+
+    @property
+    def sourceURL(self):
+        return ({
+            'postcodeLSOA': 'https://www.arcgis.com/sharing/rest/content/items/6a46e14a6c2441e3ab08c7b277335558/data',
+            'postcodeLatLong': 'https://api.os.uk/downloads/v1/products/CodePointOpen/downloads?area=GB&format=CSV&redirect',
+            'imdLSOA': 'https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv',
+            'populationLSOA': 'https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates/mid2020sape23dt2/sape23dt2mid2020lsoasyoaestimatesunformatted.xlsx',
+            'ethnicityLSOA': 'https://www.nomisweb.co.uk/api/v01/dataset/NM_522_1.data.csv?date=latest&geography=1249902593...1249937345&rural_urban=0&c_ethnicid=100,200,300,400,500&measures=20100',
+            'areaLSOA': 'https://www.arcgis.com/sharing/rest/content/items/5a94044d113a4bd5bd895975d6612b05/data',
+            'gpRegistration': 'https://files.digital.nhs.uk/0E/59E17A/gp-reg-pat-prac-lsoa-male-female-July-2022.zip',
+            'gpPractice': 'https://files.digital.nhs.uk/assets/ods/current/epraccur.zip',
+            'gpStaff': 'https://files.digital.nhs.uk/assets/ods/current/epracmem.zip',
+            'qofHD': 'https://files.digital.nhs.uk/8A/57C8D5/qof-2122-prev-ach-pca-hd-prac.xlsx',
+            'qofCV': 'https://files.digital.nhs.uk/64/72639B/qof-2122-prev-ach-pca-cv-prac.xlsx',
+            'qofRES': 'https://files.digital.nhs.uk/74/5A4200/qof-2122-prev-ach-pca-resp-prac.xlsx',
+            'qofLS': 'https://files.digital.nhs.uk/11/664041/qof-2122-prev-ach-pca-ls-prac.xlsx',
+            'qofMH': 'https://files.digital.nhs.uk/67/C2C611/qof-2122-prev-ach-pca-neu-prac.xlsx',
+            'geoLSOA': 'https://borders.ukdataservice.ac.uk/ukborders/easy_download/prebuilt/shape/infuse_lsoa_lyr_2011.zip'
+        })
 
 
     @property
     def expectedHashes(self):
         return ({
             'postcodeLSOA': '34bf96ff8f316c6f9dada1d52dc8032e52bed7717d73b5fda4fe1d491e4cdb66',
-            'postcodeLatLong': '1a57720e30f3c7e0843b14e3c4e9a0f8f6dba43714b02dfebf1adacbe0063bd8',
+            'postcodeLatLong': 'fb76bf98e30cfc466b3bc9684317fe26413c1e4b0c7edbe5cea79d7c12679ddc',
             'imdLSOA': 'af86bf505d9174a65cc87eb9ad97b85b2b53bf481d0e75c7cf41aa5645622aa2',
             'populationLSOA': '42cae583caf558be7aa285c94141c9d3151e3b4b66a15499e4fbf2d114d6ae36',
             'ethnicityLSOA': 'a9b84a525db2141742721a3669709ff451df049283f2df09ed86d1a1183fbe97',
@@ -93,7 +131,9 @@ class getData():
             logger.error(f'OSMNX not installed - skipping {name}.')
             return None
         else:
-            out = f'{self.cache}/{self.options[name].removesuffix(".gz")}'
+            out = f'{self.cache}/{self.options[name]}'
+            if out.endswith('.gz'):
+                out = out[:-3]
             if os.path.exists(out):
                 logger.info(f'Data already cached - loading from {out}')
                 path = out
@@ -184,8 +224,7 @@ class getData():
 
     def _sourceLSOA(self):
         name = 'PCD_OA_LSOA_MSOA_LAD_FEB20_UK_LU.csv'
-        url = ('https://www.arcgis.com/sharing/rest/content/items/'
-               '6a46e14a6c2441e3ab08c7b277335558/data')
+        url = self.sourceURL['postcodeLSOA']
         logger.info(f'Downloading LSOA lookup from {url}')
         path = self._getSourcePath('postcodeLSOA')
         with tempfile.TemporaryDirectory() as tmp:
@@ -224,8 +263,7 @@ class getData():
 
 
     def _sourcePostcodeLatLong(self):
-        url = ('https://api.os.uk/downloads/v1/products/CodePointOpen/'
-               'downloads?area=GB&format=CSV&redirect')
+        url = self.sourceURL['postcodeLatLong']
         logger.info(f'Downloading Postcode Lat-Long lookup from {url}')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
@@ -245,9 +283,7 @@ class getData():
 
     def _sourceIMD(self):
         name = 'imd-statistics.parquet'
-        url = ('https://assets.publishing.service.gov.uk/government/uploads/system'
-               '/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__'
-               'Ranks__Deciles_and_Population_Denominators_3.csv')
+        url = self.sourceURL['imdLSOA']
         logger.info(f'Downloading IMD statistics from {url}')
         dtype = ({
             'LSOA11CD'            : str,   # LSOA code (2011)
@@ -290,10 +326,7 @@ class getData():
 
     def _sourcePopulation(self):
         name = 'SAP23DT2-mid2020-LSOA.xlsx'
-        url = ('https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/'
-               'populationandmigration/populationestimates/datasets/'
-               'lowersuperoutputareamidyearpopulationestimates/mid2020sape23dt2/'
-               'sape23dt2mid2020lsoasyoaestimatesunformatted.xlsx')
+        url = self.sourceURL['populationLSOA']
         headers = [(
             'Accept',
             'text/html,application/xhtml+xml,application/xml;'
@@ -315,9 +348,8 @@ class getData():
 
 
     def _sourceEthnicity(self):
-        url = ('https://www.nomisweb.co.uk/api/v01/dataset/NM_522_1.data.csv'
-               '?date=latest&geography=1249902593...1249937345&rural_urban=0&'
-               'c_ethnicid=100,200,300,400,500&measures=20100')
+        url = self.sourceURL['ethnicityLSOA']
+        logger.info(f'Downloading Ethnicity by LSOA from {url}')
         path = self._getSourcePath('ethnicityLSOA')
         with tempfile.TemporaryDirectory() as tmp:
             urllib.request.urlretrieve(url, f'{tmp}/data.csv')
@@ -360,8 +392,7 @@ class getData():
 
 
     def _sourceArea(self):
-        url = ('https://www.arcgis.com/sharing/rest/content/items/'
-               '5a94044d113a4bd5bd895975d6612b05/data')
+        url = self.sourceURL['areaLSOA']
         logger.info(f'Downloading LSOA land area lookup from {url}')
         path = self._getSourcePath('areaLSOA')
         with tempfile.TemporaryDirectory() as tmp:
@@ -380,8 +411,7 @@ class getData():
 
 
     def _sourceGPregistration(self):
-        url = ('https://files.digital.nhs.uk/0E/59E17A/'
-               'gp-reg-pat-prac-lsoa-male-female-July-2022.zip')
+        url = self.sourceURL['gpRegistration']
         logger.info(f'Downloading GP registration lookup from {url}')
         path = self._getSourcePath('gpRegistration')
         with tempfile.TemporaryDirectory() as tmp:
@@ -405,7 +435,7 @@ class getData():
 
 
     def _sourceGPpractice(self):
-        url = 'https://files.digital.nhs.uk/assets/ods/current/epraccur.zip'
+        url = self.sourceURL['gpPractice']
         logger.info(f'Downloading GP practice lookup from {url}')
         path = self._getSourcePath('gpPractice')
         with tempfile.TemporaryDirectory() as tmp:
@@ -474,7 +504,7 @@ class getData():
 
 
     def _sourceGPstaff(self):
-        url = 'https://files.digital.nhs.uk/assets/ods/current/epracmem.zip'
+        url = self.sourceURL['gpStaff']
         logger.info(f'Downloading GP staff lookup from {url}')
         path = self._getSourcePath('gpStaff')
         with tempfile.TemporaryDirectory() as tmp:
@@ -523,8 +553,7 @@ class getData():
 
 
     def _sourceQOFhd(self):
-        url = ('https://files.digital.nhs.uk/8A/57C8D5/'
-               'qof-2122-prev-ach-pca-hd-prac.xlsx')
+        url = self.sourceURL['qofHD']
         logger.info(f'Downloading QOF 2020/2021 High Dep data from {url}')
         qofHD = []
         with tempfile.TemporaryDirectory() as tmp:
@@ -565,8 +594,7 @@ class getData():
 
 
     def _sourceQOFcv(self):
-        url = ('https://files.digital.nhs.uk/64/72639B/'
-               'qof-2122-prev-ach-pca-cv-prac.xlsx')
+        url = self.sourceURL['qofCV']
         logger.info(f'Downloading QOF 2020/2021 CV data from {url}')
         qofCV = []
         with tempfile.TemporaryDirectory() as tmp:
@@ -590,8 +618,7 @@ class getData():
 
 
     def _sourceQOFres(self):
-        url = ('https://files.digital.nhs.uk/74/5A4200/'
-               'qof-2122-prev-ach-pca-resp-prac.xlsx')
+        url = self.sourceURL['qofRES']
         logger.info(f'Downloading QOF 2020/2021 Res data from {url}')
         qofRes = []
         with tempfile.TemporaryDirectory() as tmp:
@@ -615,8 +642,7 @@ class getData():
 
 
     def _sourceQOFls(self):
-        url = ('https://files.digital.nhs.uk/11/664041/'
-               'qof-2122-prev-ach-pca-ls-prac.xlsx')
+        url = self.sourceURL['qofLS']
         logger.info(f'Downloading QOF 2020/2021 LS data from {url}')
         qofLS = []
         with tempfile.TemporaryDirectory() as tmp:
@@ -640,8 +666,7 @@ class getData():
 
 
     def _sourceQOFmh(self):
-        url = ('https://files.digital.nhs.uk/67/C2C611/'
-               'qof-2122-prev-ach-pca-neu-prac.xlsx')
+        url = self.sourceURL['qofMH']
         logger.info(f'Downloading QOF 2020/2021 MH data from {url}')
         qofMH = []
         with tempfile.TemporaryDirectory() as tmp:
@@ -693,8 +718,7 @@ class getData():
 
 
     def _sourceMap(self):
-        url = ('https://borders.ukdataservice.ac.uk/ukborders/easy_download/'
-               'prebuilt/shape/infuse_lsoa_lyr_2011.zip')
+        url = self.sourceURL['geoLSOA']
         logger.info(f'Downloading LSOA Shapefile from {url}')
         path = self._getSourcePath('geoLSOA')
         esneftLSOA = self.fromHost('esneftLSOA')

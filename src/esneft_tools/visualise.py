@@ -38,7 +38,7 @@ def choroplethLSOA(LSOAsummary, geojson, colour, location=None, cmap='viridis'):
     return fig
 
 
-def scatterGP(GPsummary, minCount=1):
+def scatterGP(GPsummary, minCount=1, palette=px.colors.qualitative.Plotly):
     GPsummary = GPsummary.copy()
     # Aggregate settings with too few counts
     count = GPsummary['PrescribingSetting'].value_counts()
@@ -54,7 +54,7 @@ def scatterGP(GPsummary, minCount=1):
         hover_name='OrganisationName',
         hover_data=['PCDS', 'Status', 'IMD', 'Patient', 'OpenDate'],
         color='PrescribingSetting',
-        color_discrete_sequence=px.colors.qualitative.Plotly,
+        color_discrete_sequence=palette,
         mapbox_style="carto-positron",
         zoom=8.2, center = {'lat': 52.08, 'lon': 1.02},
         width=870, height=600, opacity=1

@@ -94,6 +94,8 @@ setVerbosity(logging.INFO)
 ## Retrieve Public Data
 
 ### Download
+
+#### From Host
 Each of the `esneft_tools.download.getData().fromHost()` functions retrieve a static copy of a particular data set from GitHub.
 A local copy of these tables is saved to `./.data-cache/` by default.
 Each can be obtained individually but it is recommended to retrieve all data, as below.
@@ -124,14 +126,28 @@ data = getData.fromHost('all')
     * GP Practice information from [NHS Digital](https://digital.nhs.uk/services/organisation-data-service/file-downloads/gp-and-gp-practice-related-data)
   * `gpStaff`
     * GPs by GP Practices from [NHS Digital](https://digital.nhs.uk/services/organisation-data-service/file-downloads/gp-and-gp-practice-related-data)
-  * `qofDM`
-    * Quality and Outcomes Framework, 2021-22 for Diabetes from [NHS Digital](https://digital.nhs.uk/data-and-information/publications/statistical/quality-and-outcomes-framework-achievement-prevalence-and-exceptions-data/2021-22)
+  * `qof`
+    * Quality and Outcomes Framework, 2021-22 from [NHS Digital](https://digital.nhs.uk/data-and-information/publications/statistical/quality-and-outcomes-framework-achievement-prevalence-and-exceptions-data/2021-22)
   * `geoLSOA`
     * LSOA GeoJSON from [UK Data Service](https://statistics.ukdataservice.ac.uk/dataset/2011-census-geography-boundaries-lower-layer-super-output-areas-and-data-zones)
   * `esneftLSOA`
     * List of LSOAs within ESNEFT trust.
   * `esneftOSM`
     * OpenStreetMap (OSM) data for ESNEFT area from [Geofabrik](https://download.geofabrik.de/europe/great-britain/england.html)
+
+#### From Source
+Alternatively, the `.fromSource()` method can be used to retrieve each dataset directly from its public source.
+By default, `esneft_tools` will retrieve the source data that matches the `fromHost()` methods.
+Each source URL can be updated to newer versions by providing a YAML file to `download.getData()` as shown below.
+An example of the YAML file is shown [here](./README_files/sourceURL.yaml).
+
+```python
+# Instantiate data download class.
+getData = download.getData(sourceURL='sourceURL.yaml', cache='./.data-cache')
+
+# Retrieve a specific dataset from host.
+imdLSOA = getData.fromSource('imdLSOA')
+```
 
 
 ### Processing

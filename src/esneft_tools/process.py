@@ -35,7 +35,8 @@ def _parseIoDcols(imd: pd.DataFrame, iod_cols: list = None):
 
 def getGPsummary(gpRegistration, gpPractice, gpStaff,
                  postcodeLSOA, imdLSOA, esneftOSM,
-                 qof, iod_cols: list = None, **kwargs):
+                 qof, iod_cols: list = None, bins: int = 5,
+                 quantile: bool = True, **kwargs):
     """ Compute mean IoD per GP practice weighted by patient population """
     iod_cols = _parseIoDcols(imdLSOA, iod_cols)
     summary = (pd
@@ -52,6 +53,13 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
     summary['patientPerGP'] = summary['Patient'] / summary['meanStaff']
     summary['ESNEFT'] = summary['PCDS'].isin(
         postcodeLSOA.loc[postcodeLSOA['ESNEFT']].index)
+    cutter = pd.qcut if quantile else pd.cut
+    name = 'q' if quantile else 'i'
+    for col in iod_cols:
+        summary[f'{col} ({name}{bins})'] = cutter(
+            summary[col], bins, labels=list(range(bins, 0, -1)))
+        summary[f'{col} ({name}{bins})'] = (
+            summary[f'{col} ({name}{bins})'].astype(float).fillna(-1).astype(int))
     if (esneftOSM is not None) and ('osmnx' in sys.modules):
         valid = summary[['Lat', 'Long']].notna().all(axis=1)
         summary.loc[valid, 'Node'] = ox.distance.nearest_nodes(
@@ -92,6 +100,8 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
     for col in iod_cols:
         summary[f'{col} ({name}{bins})'] = cutter(
             summary[col], bins, labels=list(range(bins, 0, -1)))
+        summary[f'{col} ({name}{bins})'] = (
+            summary[f'{col} ({name}{bins})'].astype(float).fillna(-1).astype(int))
     diseases = [c for c in qof.columns if c.endswith('-prevalance')]
     for disease in diseases:
         logger.info(f'Processing {disease}.')

@@ -1,0 +1,15 @@
+postcodeLSOA: https://www.arcgis.com/sharing/rest/content/items/6a46e14a6c2441e3ab08c7b277335558/data
+postcodeLatLong: https://api.os.uk/downloads/v1/products/CodePointOpen/downloads?area=GB&format=CSV&redirect
+imdLSOA: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv
+populationLSOA: https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates/mid2020sape23dt2/sape23dt2mid2020lsoasyoaestimatesunformatted.xlsx
+ethnicityLSOA: https://www.nomisweb.co.uk/api/v01/dataset/NM_522_1.data.csv?date=latest&geography=1249902593...1249937345&rural_urban=0&c_ethnicid=100,200,300,400,500&measures=20100
+areaLSOA: https://www.arcgis.com/sharing/rest/content/items/5a94044d113a4bd5bd895975d6612b05/data
+gpRegistration: https://files.digital.nhs.uk/0E/59E17A/gp-reg-pat-prac-lsoa-male-female-July-2022.zip
+gpPractice: https://files.digital.nhs.uk/assets/ods/current/epraccur.zip
+gpStaff: https://files.digital.nhs.uk/assets/ods/current/epracmem.zip
+qofHD: https://files.digital.nhs.uk/8A/57C8D5/qof-2122-prev-ach-pca-hd-prac.xlsx
+qofCV: https://files.digital.nhs.uk/64/72639B/qof-2122-prev-ach-pca-cv-prac.xlsx
+qofRES: https://files.digital.nhs.uk/74/5A4200/qof-2122-prev-ach-pca-resp-prac.xlsx
+qofLS: https://files.digital.nhs.uk/11/664041/qof-2122-prev-ach-pca-ls-prac.xlsx
+qofMH: https://files.digital.nhs.uk/67/C2C611/qof-2122-prev-ach-pca-neu-prac.xlsx
+geoLSOA: https://borders.ukdataservice.ac.uk/ukborders/easy_download/prebuilt/shape/infuse_lsoa_lyr_2011.zip
