@@ -210,7 +210,6 @@ LSOAsummary = process.getLSOAsummary(**data, iod_cols='IMD')
 
 ```python
 fig = visualise.scatterGP(GPsummary[GPsummary['Status'] == 'Active'], minCount=250)
-fig.write_image('GP-locations.png')
 ```
 
 ![gp-loc](./README_files/GP-locations.png)
@@ -221,7 +220,6 @@ fig.write_image('GP-locations.png')
 
 ```python
 fig = visualise.choroplethLSOA(LSOAsummary, data['geoLSOA'], colour='IMD')
-fig.write_image('LSOA-choropleth.png')
 ```
 
 ![gp-loc](./README_files/LSOA-choropleth.png)
