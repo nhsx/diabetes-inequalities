@@ -86,7 +86,7 @@ class getData():
             'postcodeLatLong': 'https://api.os.uk/downloads/v1/products/CodePointOpen/downloads?area=GB&format=CSV&redirect',
             'imdLSOA': 'https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv',
             'populationLSOA': 'https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates/mid2020sape23dt2/sape23dt2mid2020lsoasyoaestimatesunformatted.xlsx',
-            'ethnicityLSOA': 'https://www.nomisweb.co.uk/api/v01/dataset/NM_522_1.data.csv?date=latest&geography=1249902593...1249937345&rural_urban=0&c_ethnicid=100,200,300,400,500&measures=20100',
+            'ethnicityLSOA': 'https://www.nomisweb.co.uk/api/v01/dataset/NM_522_1.data.csv?date=latest&geography=1249902593...1249937345&rural_urban=0&c_ethnicid=0,100&measures=20100&select=GEOGRAPHY_CODE,C_ETHNICID_NAME,OBS_VALUE',
             'areaLSOA': 'https://www.arcgis.com/sharing/rest/content/items/5a94044d113a4bd5bd895975d6612b05/data',
             'gpRegistration': 'https://files.digital.nhs.uk/0E/59E17A/gp-reg-pat-prac-lsoa-male-female-July-2022.zip',
             'gpPractice': 'https://files.digital.nhs.uk/assets/ods/current/epraccur.zip',
@@ -107,7 +107,6 @@ class getData():
             'postcodeLatLong': 'fb76bf98e30cfc466b3bc9684317fe26413c1e4b0c7edbe5cea79d7c12679ddc',
             'imdLSOA': 'af86bf505d9174a65cc87eb9ad97b85b2b53bf481d0e75c7cf41aa5645622aa2',
             'populationLSOA': '42cae583caf558be7aa285c94141c9d3151e3b4b66a15499e4fbf2d114d6ae36',
-            'ethnicityLSOA': 'a9b84a525db2141742721a3669709ff451df049283f2df09ed86d1a1183fbe97',
             'areaLSOA': '7f97767f8142754b81a6c8a0722d3d104a89e1a4c72276eb1dc00e06ebbca3ff',
             'gpRegistration': '920beffa35cba1d2cdcd879603cd886c337d550961048f3c13e2ac8d6e4cf8c2',
             'gpPractice': '3584ac0f169747f6a7486983a593db825703f947d7e63af004936abd354c0e93',
@@ -350,17 +349,25 @@ class getData():
     def _sourceEthnicity(self):
         url = self.sourceURL['ethnicityLSOA']
         logger.info(f'Downloading Ethnicity by LSOA from {url}')
+        url += '&RecordOffset={}' # API called in increments due to size limit
         path = self._getSourcePath('ethnicityLSOA')
-        with tempfile.TemporaryDirectory() as tmp:
-            urllib.request.urlretrieve(url, f'{tmp}/data.csv')
-            self._verifyHash('ethnicityLSOA', [f'{tmp}/data.csv'])
-            dtype = {'LSOA11CD': str, 'Ethnicity': str, 'Count': int}
-            cols = [8, 19, 26]
-            ethnicityLSOA = pd.read_csv(
-                f'{tmp}/data.csv', usecols=cols,
-                names=dtype.keys(), dtype=dtype, skiprows=1)
+        ethnicityLSOA = []
+        offset = 0
+        while True:
+            with tempfile.TemporaryDirectory() as tmp:
+                urllib.request.urlretrieve(url.format(offset), f'{tmp}/data.csv')
+                dtype = {'LSOA11CD': str, 'Ethnicity': str, 'Count': int}
+                data = pd.read_csv(
+                    f'{tmp}/data.csv',
+                    names=dtype.keys(), dtype=dtype, skiprows=1)
+                if data.empty:
+                    break
+                ethnicityLSOA.append(data)
+            offset += 24000
         ethnicityLSOA = (
-                ethnicityLSOA.groupby('LSOA11CD')
+                pd.concat(ethnicityLSOA)
+                .drop_duplicates()
+                .groupby('LSOA11CD')
                 .apply(self._getEthnicMinority)
                 .rename('EthnicMinority')
                 .to_frame())
