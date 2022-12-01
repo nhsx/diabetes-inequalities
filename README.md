@@ -120,7 +120,7 @@ data = getData.fromHost('all')
 * `ethnicityLSOA`
   * Proportion of ethnicity minorities (non-white) by LSOA from [NOMIS](https://www.nomisweb.co.uk/query/select/getdatasetbytheme.asp?opt=3&theme=&subgrp=)
 *  `areaLSOA`
-  * Land hectare measures by LSOA from [ArcGIS](https://hub.arcgis.com/datasets/ons::standard-area-measurements-2011-for-2011-census-areas-in-england-and-wales/about)
+   * Land hectare measures by LSOA from [ArcGIS](https://hub.arcgis.com/datasets/ons::standard-area-measurements-2011-for-2011-census-areas-in-england-and-wales/about)
 * `gpRegistration`
   * GP registration by LSOA [NHS Digital](https://digital.nhs.uk/data-and-information/publications/statistical/patients-registered-at-a-gp-practice/metadata)
 * `gpPractice`
