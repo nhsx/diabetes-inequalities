@@ -26,14 +26,14 @@ Start times are required but end times are optional. The `interval` parameter en
 
 ```python
 # Generate a synthetic datapoint
-data = synthetic.emergency(size=1, seed=52)
+syntheticData = synthetic.emergency(size=1, seed=52)
 times = ([
     'incidentDateTime', 'arrivalDateTime', 'registeredDateTime',
     'triagedDateTime', 'seen1DateTime', 'seen2DateTime',
     'fitDischargeDateTime', 'departDateTime'
 ])
 # Convert to long-format
-df = pd.melt(data, id_vars='patientID', value_vars=times)
+df = pd.melt(syntheticData, id_vars='patientID', value_vars=times)
 
 # Prepare for visualisation - enforce minimum event lengths of 300s.
 df = process.prepTime(
@@ -52,10 +52,10 @@ It computes event frequency at set intervals.
 Frequency is scaled to 1 and may be normalised within each group, or across the entire dataset.
 
 ```python
-data = synthetic.emergency(size=10_000, seed=42)
+syntheticData = synthetic.emergency(size=10_000, seed=42)
 df = process.prepTime(
-    data, start='arrivalDateTime', end='departDateTime',
-    group='site', interval='1D')
+    syntheticData, start='arrivalDateTime', 
+    end='departDateTime', group='site', interval='1D')
 df = process.summariseTime(df, interval='1D', normByGroup=True)
 fig = visualise.timeline(df)
 fig.show()
@@ -69,6 +69,7 @@ fig.show()
 
 #### Compute Travel Distance
 The `computeTravelDistance` function uses `OSMNX` to compute the minimum distance to the nearest healthcare service (e.g. GP practice) from any point in the ESNEFT region.
+The below example assumes you have already generated the `data` object from `getData.fromHost('all')` as shown in the [walkthrough](/README.md#download).
 
 ```python
 activeGP = GPsummary.loc[
