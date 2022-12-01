@@ -19,6 +19,7 @@
     * [Practice Map](#practice-map)
     * [LSOA Map](#lsoa-map)
   * [Further Documentation](#additional-documentation)
+  * [Contributing](#contributing)
   * [License](#license)
   * [Contact](#contact)
 
@@ -230,11 +231,22 @@ fig = visualise.choroplethLSOA(LSOAsummary, data['geoLSOA'], colour='IMD')
 Refer to the [additional documentation](./README_files/docs.md) for further examples of functionality.
 
 
-## License
+### Contributing
+
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+
+### License
 Distributed under the MIT License. _See [LICENSE](./LICENSE) for more information._
 
 
-## Contact
+### Contact
 
 If you have any other questions please contact the author **[Stephen Richer](https://www.linkedin.com/in/stephenricher/)**
 at stephen.richer@nhs.net
