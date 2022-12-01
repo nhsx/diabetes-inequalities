@@ -109,32 +109,32 @@ getData = download.getData(cache='./.data-cache')
 data = getData.fromHost('all')
 ```
 
-  * `all` **(default)**
-    * Retrieve all of the below data in dictionary format (**recommended**).
-  *  `postcodeLSOA`
-    * Postcode -> LSOA (2011) lookup Table from [ArcGIS](https://hub.arcgis.com/datasets/6a46e14a6c2441e3ab08c7b277335558/about)
-  *  `imdLSOA`
-    * Indices of Multiple Deprivation by LSOA in England from [National Statistics (.gov.uk)](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv/preview)
-  *  `populationLSOA`
-    * LSOA population estimates, by age and sex, from [ONS](https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates)
-  * `ethnicityLSOA`
-    * Proportion of ethnicity minorities (non-white) by LSOA from [NOMIS](https://www.nomisweb.co.uk/query/select/getdatasetbytheme.asp?opt=3&theme=&subgrp=)
-  *  `areaLSOA`
-    * Land hectare measures by LSOA from [ArcGIS](https://hub.arcgis.com/datasets/ons::standard-area-measurements-2011-for-2011-census-areas-in-england-and-wales/about)
-  * `gpRegistration`
-    * GP registration by LSOA [NHS Digital](https://digital.nhs.uk/data-and-information/publications/statistical/patients-registered-at-a-gp-practice/metadata)
-  * `gpPractice`
-    * GP Practice information from [NHS Digital](https://digital.nhs.uk/services/organisation-data-service/file-downloads/gp-and-gp-practice-related-data)
-  * `gpStaff`
-    * GPs by GP Practices from [NHS Digital](https://digital.nhs.uk/services/organisation-data-service/file-downloads/gp-and-gp-practice-related-data)
-  * `qof`
-    * Quality and Outcomes Framework, 2021-22 from [NHS Digital](https://digital.nhs.uk/data-and-information/publications/statistical/quality-and-outcomes-framework-achievement-prevalence-and-exceptions-data/2021-22)
-  * `geoLSOA`
-    * LSOA GeoJSON from [UK Data Service](https://statistics.ukdataservice.ac.uk/dataset/2011-census-geography-boundaries-lower-layer-super-output-areas-and-data-zones)
-  * `esneftLSOA`
-    * List of LSOAs within ESNEFT trust.
-  * `esneftOSM`
-    * OpenStreetMap (OSM) data for ESNEFT area from [Geofabrik](https://download.geofabrik.de/europe/great-britain/england.html)
+* `all` **(default)**
+  * Retrieve all of the below data in dictionary format (**recommended**).
+*  `postcodeLSOA`
+  * Postcode -> LSOA (2011) lookup Table from [ArcGIS](https://hub.arcgis.com/datasets/6a46e14a6c2441e3ab08c7b277335558/about)
+*  `imdLSOA`
+  * Indices of Multiple Deprivation by LSOA in England from [National Statistics (.gov.uk)](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv/preview)
+*  `populationLSOA`
+  * LSOA population estimates, by age and sex, from [ONS](https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates)
+* `ethnicityLSOA`
+  * Proportion of ethnicity minorities (non-white) by LSOA from [NOMIS](https://www.nomisweb.co.uk/query/select/getdatasetbytheme.asp?opt=3&theme=&subgrp=)
+*  `areaLSOA`
+  * Land hectare measures by LSOA from [ArcGIS](https://hub.arcgis.com/datasets/ons::standard-area-measurements-2011-for-2011-census-areas-in-england-and-wales/about)
+* `gpRegistration`
+  * GP registration by LSOA [NHS Digital](https://digital.nhs.uk/data-and-information/publications/statistical/patients-registered-at-a-gp-practice/metadata)
+* `gpPractice`
+  * GP Practice information from [NHS Digital](https://digital.nhs.uk/services/organisation-data-service/file-downloads/gp-and-gp-practice-related-data)
+* `gpStaff`
+  * GPs by GP Practices from [NHS Digital](https://digital.nhs.uk/services/organisation-data-service/file-downloads/gp-and-gp-practice-related-data)
+* `qof`
+  * Quality and Outcomes Framework, 2021-22 from [NHS Digital](https://digital.nhs.uk/data-and-information/publications/statistical/quality-and-outcomes-framework-achievement-prevalence-and-exceptions-data/2021-22)
+* `geoLSOA`
+  * LSOA GeoJSON from [UK Data Service](https://statistics.ukdataservice.ac.uk/dataset/2011-census-geography-boundaries-lower-layer-super-output-areas-and-data-zones)
+* `esneftLSOA`
+  * List of LSOAs within ESNEFT trust.
+* `esneftOSM`
+  * OpenStreetMap (OSM) data for ESNEFT area from [Geofabrik](https://download.geofabrik.de/europe/great-britain/england.html)
 
 #### From Source
 Alternatively, the `.fromSource()` method can be used to retrieve each dataset directly from its public source.
