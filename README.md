@@ -5,10 +5,6 @@
 ## Table of contents
 
   * [Installation](#installation)
-    * [Virtual Environment](#virtual-environment)
-      * [Unix/macOS](#unixmacos)
-      * [Windows](#windows)
-    * [Docker](#docker)
   * [Setup](#setup)
   * [Retrieve Data](#retrieve-public-data)
     * [Download](#download)
@@ -26,60 +22,67 @@
 
 ## Installation
 Installation is possible via `pip` as shown below.
-To manage dependencies and avoid conflicts it is recommended to install within a [virtual environment](#virtual-environment) or a [Docker container](#docker) as described.
 
+Unix/macOS
 ```bash
-pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+python3 -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
 ```
 
-### Virtual Environment
+Windows
+```bash
+py -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+```
 
-#### Unix/macOS
-Run the following commands via Terminal.
+#### Install within a Virtual Environment (optional)
+<details>
+<summary><strong>Unix/macOS</strong></summary>
 
 ```bash
 python -m venv esneft_tools
 source esneft_tools/bin/activate
-pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+python3 -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
 ```
+</details>
 
-#### Windows
-Run the following commands via PowerShell.
+<details>
+<summary><strong>Windows</strong></summary>
 
-```PowerShell
+```bash
 py -m venv esneft_tools
 esneft_tools/Scripts/Activate.ps1
-pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+py -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
 ```
 
 If running scripts is disabled on your system then run the following command before activating your environment.
 
-```PowerShell
+```bash
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
+</details>
 
-### Docker
 
-```bash
-git clone --depth 1 https://github.com/nhsx/p24-pvt-diabetes-inequal.git
-cd p24-pvt-diabetes-inequal/
-docker build -t esneft_tools .
-image=$(docker run -id esneft_tools)
-docker exec -i $image python < your_script.py
-```
-
-Refer to the [Docker documentation](https://docs.docker.com/get-docker/) for Docker installation instructions.
-
-### Optional Dependencies
+#### Geospatial Dependencies (optional)
 Additional geospatial utilities may be optionally installed as below.
 Note these packages have non-trivial dependencies and automatic installation may not work on all systems.
 
-```bash
-pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal#egg=esneft_tools[geo]
-```
-
 An additional optional dependency, OSMnx, must be installed by the user.
 Please refer to the [OSMnx documentation](https://osmnx.readthedocs.io/en/stable/) for further installation instructions.
+
+<details>
+<summary><strong>Clear here for code</strong></summary>
+
+Unix/macOS
+```bash
+python3 -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal#egg=esneft_tools[geo]
+```
+
+Windows
+```bash
+py -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal#egg=esneft_tools[geo]
+```
+
+</details>
+
 
 ## Setup
 The logging level of `esneft_tools` can be set via the `setVerbosity()` function.
@@ -120,7 +123,7 @@ data = getData.fromHost('all')
 * `ethnicityLSOA`
   * Proportion of ethnicity minorities (non-white) by LSOA from [NOMIS](https://www.nomisweb.co.uk/query/select/getdatasetbytheme.asp?opt=3&theme=&subgrp=)
 *  `areaLSOA`
-   * Land hectare measures by LSOA from [ArcGIS](https://hub.arcgis.com/datasets/ons::standard-area-measurements-2011-for-2011-census-areas-in-england-and-wales/about)
+  * Land hectare measures by LSOA from [ArcGIS](https://hub.arcgis.com/datasets/ons::standard-area-measurements-2011-for-2011-census-areas-in-england-and-wales/about)
 * `gpRegistration`
   * GP registration by LSOA [NHS Digital](https://digital.nhs.uk/data-and-information/publications/statistical/patients-registered-at-a-gp-practice/metadata)
 * `gpPractice`
@@ -247,6 +250,4 @@ Distributed under the MIT License. _See [LICENSE](./LICENSE) for more informatio
 
 
 ## Contact
-
-If you have any other questions please contact the author **[Stephen Richer](https://www.linkedin.com/in/stephenricher/)**
-at stephen.richer@nhs.net
+If you have any other questions please contact the author, [Stephen Richer](mailto:stephen.richer@proton.me?subject=[GitHub]%20esneft_tools).

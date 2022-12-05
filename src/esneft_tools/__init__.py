@@ -1,3 +1,6 @@
 #!/usr/bin/env python3
 
-from . import _version
+from importlib.metadata import version
+
+
+__version__ = version('esneft_tools')

@@ -13,7 +13,39 @@ jupyter:
     name: python3
 ---
 
-### LSOA lookup
+### Example
+
+```python
+import logging
+from esneft_tools.utils import setVerbosity
+from esneft_tools import download, process, visualise
+
+setVerbosity(logging.INFO)
+```
+
+```python
+# Instantiate data download class.
+getData = download.getData(cache='./.data-cache')
+
+# Retrieve all data as dictionary (recommended)
+data = getData.fromHost('all')
+```
+
+```python
+GPsummary = process.getGPsummary(**data, iod_cols='IMD')
+```
+
+```python
+LSOAsummary = process.getLSOAsummary(**data, iod_cols='IMD')
+```
+
+```python
+visualise.scatterGP(GPsummary[GPsummary['Status'] == 'Active'], minCount=250)
+```
+
+```python
+visualise.choroplethLSOA(LSOAsummary, data['geoLSOA'], colour='IMD')
+```
 
 ```python
 import logging
@@ -21,7 +53,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import spearmanr
 from pingouin import partial_corr
 from esneft_tools.utils import setVerbosity, formatP
 from esneft_tools import download, process, visualise
@@ -30,7 +61,11 @@ setVerbosity(logging.INFO)
 ```
 
 ```python
-dataDownloader = download.getData()
+dataDownloader = download.getData(sourceURL='../README_files/sourceURL.yaml')
+```
+
+```python
+ethnicityLSOA = dataDownloader.fromSource('ethnicityLSOA')
 ```
 
 ```python
@@ -48,6 +83,10 @@ deprivationCols = ([
 
 ```python
 GPsummary = process.getGPsummary(**data, iod_cols=deprivationCols)
+```
+
+```python
+GPsummary.head()
 ```
 
 ```python
@@ -125,61 +164,6 @@ fig.savefig(f'plots/national_prevalance_by_{iod}.png', dpi=300)
 ```
 
 ```python
-metrics = ({'DM019-BP': 'BP < 140/80 mmHg', 'DM020-HbA1c': 'IFCC-HbA1c < 58 mmol/mol'})
-fig, axes = plt.subplots(1, 2, figsize=(12, 7), sharex=True, sharey=True)
-axes = axes.flatten()
-for i, (metric, label) in enumerate(metrics.items()):
-    rho, p = spearmanr(GPsummary[[iod, metric]].dropna())
-    sns.kdeplot(data=GPsummary, x=iod, y=metric, fill=True, ax=axes[i])
-    sns.regplot(data=GPsummary, x=iod, y=metric, scatter=False, ax=axes[i])
-    axes[i].set_title(f"{label} (Rho  = {rho:.2f}, {formatP(p)})", loc='left')
-    axes[i].set_ylim(0.2, 0.9)
-axes[0].set_ylabel('Proportion of patients meeting treatment target')
-fig.tight_layout()
-fig.savefig(f'plots/dm-metrics-by-{iod}.png', dpi=300)
-```
-
-```python
-df = LSOAsummary[['Age (median)', f'{iod} ({name})', 'DM-prevalance', 'Population']].dropna().copy()
-df['Age'] = pd.qcut(df['Age (median)'], 5)
-table = (
-    df.groupby(['Age', f'{iod} ({name})'])
-    .apply(lambda x: (np.average(x['DM-prevalance'], weights=x['Population'])) * 100_000)
-    .reset_index()
-    .pivot(index='Age', columns=f'{iod} ({name})')
-    .droplevel(0, axis=1)
-)
-fig, ax = plt.subplots()
-sns.heatmap(table, cmap='viridis', ax=ax)
-ax.set_title(f'Diabetes Prevalance by Age and {iod}', loc='left')
-fig.tight_layout()
-fig.savefig(f'plots/prevalance_by_age_by_{iod}.png', dpi=300)
-```
-
-```python
-fig, ax = plt.subplots()
-sns.kdeplot(data=LSOAsummary, x=iod, y='EthnicMinority', fill=True, ax=ax)
-sns.regplot(data=LSOAsummary, x=iod, y='EthnicMinority', order=1, scatter=False, ax=ax)
-ax.set_ylabel('Proportion of Ethnic Minority')
-fig.tight_layout()
-fig.savefig(f'plots/ethnicity_by_{iod}.png', dpi=300)
-```
-
-```python
-fig, ax = plt.subplots()
-sns.kdeplot(data=LSOAsummary.dropna(), x='Age (median)', hue=f'{iod} ({name})', common_norm=False, ax=ax)
-fig.tight_layout()
-fig.savefig(f'plots/age-by-{iod}.png', dpi=300)
-```
-
-```python
-prev_by_imd = sns.lmplot(
-    data=LSOAsummary.dropna(), x='Age (median)', 
-    y='DM-prevalance', hue=f'{iod} ({name})', scatter=False)
-prev_by_imd.savefig(f'plots/prevalance-age-by-{iod}.png', dpi=300)
-```
-
-```python
 fig = visualise.scatterGP(GPsummary[GPsummary['Status'] == 'Active'], minCount=250)
 fig.show()
 fig.write_image('plots/GP-locations.png')
@@ -228,11 +212,10 @@ postcodeLSOA = pd.merge(
 sns.scatterplot(data=postcodeLSOA, x='Distance', y='IMD', hue='IMD (q5)')
 ```
 
-geoLSOA = dataDownloader.fromSource('geoLSOA')
-imdLSOA = dataDownloader.fromSource('imdLSOA')
-postcodeLSOA = dataDownloader.fromSource('postcodeLSOA')
-gpRegistration = dataDownloader.fromSource('gpRegistration')
-gpPractise = dataDownloader.fromSource('gpPractise')
-gpStaff = dataDownloader.fromSource('gpStaff')
-populationLSOA = dataDownloader.fromSource('populationLSOA')
-areaLSOA = dataDownloader.fromSource('areaLSOA')
+```python
+
+```
+
+```python
+
+```

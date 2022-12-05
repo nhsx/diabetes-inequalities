@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = 'esneft_tools'
+version = "0.1.0"
+authors = [
+  {email = "stephen.richer@nhs.net"},
+  {name = "Stephen Richer"}
+]
+description = 'Utilities to analyse population and deprivation data.'
+readme = 'README.md'
+requires-python = ">=3.7"
+keywords = ['esneft_tools']
+license = {file = "LICENSE"}
+classifiers=[
+    'Natural Language :: English',
+    'Intended Audience :: Science/Research',
+    'Intended Audience :: Healthcare Industry',
+    'Development Status :: 1 - Planning',
+    'License :: OSI Approved :: MIT License',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+]
+dependencies = [
+    'numpy',
+    'pyyaml',
+    'plotly',
+    'pandas',
+    'pyarrow',
+    'seaborn',
+    'kaleido',
+    'openpyxl',
+    'matplotlib'
+]
+[project.optional-dependencies]
+geo = [
+    'geopandas', 'fiona', 'pyproj'
+]
+
+[project.urls]
+repository = 'https://github.com/nhsx/p24-pvt-diabetes-inequal'
