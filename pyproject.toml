@@ -40,7 +40,7 @@ dependencies = [
 ]
 [project.optional-dependencies]
 geo = [
-    'geopandas', 'fiona', 'pyproj'
+    'geopandas', 'fiona', 'pyproj', 'networkx'
 ]
 
 [project.urls]
