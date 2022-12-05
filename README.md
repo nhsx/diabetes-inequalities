@@ -73,12 +73,12 @@ Please refer to the [OSMnx documentation](https://osmnx.readthedocs.io/en/stable
 
 Unix/macOS
 ```bash
-python3 -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal#egg=esneft_tools[geo]
+python3 -m pip install esneft_tools[geo]
 ```
 
 Windows
 ```bash
-py -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal#egg=esneft_tools[geo]
+py -m pip install esneft_tools[geo]
 ```
 
 </details>
