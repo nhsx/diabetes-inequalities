@@ -1,5 +1,4 @@
-data/
-.data-cache/
+*.data-cache
 example/
 development/
 *ipynb
