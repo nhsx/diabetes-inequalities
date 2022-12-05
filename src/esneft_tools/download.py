@@ -36,12 +36,13 @@ try:
 except ModuleNotFoundError:
     logger.error('geopandas not found - some features are unavailable.')
 
-
+https://github.com/nhsx/p24-pvt-diabetes-inequal/blob/main/data/esneft-highways.osm.gz
 class getData():
 
     def __init__(self, sourceURL: str = None, cache: str = './.data-cache'):
         self.cache = cache
-        self.host = 'https://github.com/nhsx/p24-pvt-diabetes-inequal/main/data'
+        self.host = ('https://github.com/nhsx/p24-pvt-diabetes-inequal/'
+                     'blob/main/data')
         self.options = ({
             'postcodeLSOA': 'postcode-lsoa.parquet',
             'imdLSOA': 'imd-statistics.parquet',
