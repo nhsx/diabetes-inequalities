@@ -25,12 +25,12 @@ Installation is possible via `pip` as shown below.
 
 Unix/macOS
 ```bash
-python3 -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+python3 -m pip install esneft_tools
 ```
 
 Windows
 ```bash
-py -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+py -m pip install esneft_tools
 ```
 
 #### Install within a Virtual Environment (optional)
@@ -40,7 +40,7 @@ py -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
 ```bash
 python -m venv esneft_tools
 source esneft_tools/bin/activate
-python3 -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+python3 -m pip install esneft_tools
 ```
 </details>
 
@@ -50,7 +50,7 @@ python3 -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
 ```bash
 py -m venv esneft_tools
 esneft_tools/Scripts/Activate.ps1
-py -m pip install git+https://github.com/nhsx/p24-pvt-diabetes-inequal.git
+py -m pip install esneft_tools
 ```
 
 If running scripts is disabled on your system then run the following command before activating your environment.
