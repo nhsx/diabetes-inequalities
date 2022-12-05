@@ -145,14 +145,19 @@ By default, `esneft_tools` will retrieve the source data that matches the `fromH
 Each source URL can be updated to newer versions by providing a YAML file to `download.getData()` as shown below.
 An example of the YAML file is shown [here](./README_files/sourceURL.yaml).
 
+<details>
+<summary><strong>Clear here for code</strong></summary>
+
 ```python
 # Instantiate data download class.
 getData = download.getData(sourceURL='sourceURL.yaml', cache='./.data-cache')
 
 # Retrieve a specific dataset from host.
+# Note: "all" does not work with .fromSource().
 imdLSOA = getData.fromSource('imdLSOA')
 ```
 
+</details>
 
 ### Processing
 
