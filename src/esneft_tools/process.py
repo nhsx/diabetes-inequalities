@@ -119,6 +119,9 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
         score_col='DM020-HbA1c', weight_col='Patient')
     summary['Density'] = summary['Population'] / summary['LandHectare']
     summary['ESNEFT'] = summary.index.isin(esneftLSOA)
+    # Only consider England data
+    lsoa_england = imdLSOA.index
+    summary = summary.loc[summary.index.isin(lsoa_england)].copy()
     return summary
 
 
