@@ -24,7 +24,7 @@ def _weightedMean(x, cols, w='Patient'):
 
 def _parseIoDcols(imd: pd.DataFrame, iod_cols: list = None):
     if iod_cols is None:
-        iod_cols = imd.columns
+        iod_cols = [col for col in imd.columns if col != 'LSOA11NM']
     elif isinstance(iod_cols, str):
         iod_cols = [iod_cols]
     elif not isinstance(iod_cols, list):
@@ -87,14 +87,10 @@ def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
         .groupby('LSOA11CD')['Patient']
         .apply(_getGPthreshold, 0.9)
         .rename('GPservices'))
-    # Extract LSOA Name
-    lsoaName = (
-        postcodeLSOA.reset_index(drop=True)
-        .set_index('LSOA11CD')['LSOA11NM'].drop_duplicates())
     summary = pd.concat([
-        lsoaName, populationLSOA, maleProp, ethnicityLSOA,
-        areaLSOA, gpRegistrationByLSOA, gpDensity,
-        imdLSOA[iod_cols]], axis=1)
+        imdLSOA['LSOA11NM'], populationLSOA, maleProp,
+        ethnicityLSOA, areaLSOA, gpRegistrationByLSOA,
+        gpDensity, imdLSOA[iod_cols]], axis=1)
     cutter = pd.qcut if quantile else pd.cut
     name = 'q' if quantile else 'i'
     for col in iod_cols:

@@ -400,7 +400,7 @@ class getData():
                 zipRef.extractall(f'{tmp}/')
             dtype = ({
                 'LSOA11CD'   : str,
-                'LandHectare': str,
+                'LandHectare': float,
 
             })
             cols = [0, 3]
