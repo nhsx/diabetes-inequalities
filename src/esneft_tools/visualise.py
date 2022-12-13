@@ -18,8 +18,12 @@ except ModuleNotFoundError:
     logger.error('OSMNX not found - some features are unavailable.')
 
 
-def choroplethLSOA(LSOAsummary, geojson, colour, location=None, cmap='viridis'):
+def choroplethLSOA(
+        LSOAsummary, geojson, colour, location=None,
+        hover=None, cmap='viridis'):
     assert colour in LSOAsummary.columns
+    if (hover is None) and ('LSOA11NM' in LSOAsummary.columns):
+        hover = ['LSOA11NM']
     if location is None:
         location = LSOAsummary.index.name if LSOAsummary.index.name else 'index'
         LSOAsummary = LSOAsummary.reset_index()
@@ -28,7 +32,7 @@ def choroplethLSOA(LSOAsummary, geojson, colour, location=None, cmap='viridis'):
     fig = px.choropleth_mapbox(
         LSOAsummary, geojson=geojson,
         locations=location, color=colour,
-        hover_data=['LSOA11NM'],
+        hover_data=hover,
         color_continuous_scale=cmap,
         mapbox_style="carto-positron",
         zoom=8.5, center = {'lat': 52.08, 'lon': 1.02},
