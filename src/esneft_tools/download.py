@@ -57,6 +57,10 @@ class getData():
             'geoLSOA': 'lsoa-map-esneft.geojson',
             'esneftOSM': 'esneft-highways.osm.gz'
         })
+        self.summary = ({
+            'LSOAsummary': 'lsoa-summary.parquet',
+            'GPsummary': 'gp-summary.parquet'
+        })
         self.observedHashes = {}
         self.osmnx = 'osmnx' in sys.modules
         os.makedirs(self.cache , exist_ok=True)
@@ -191,6 +195,22 @@ class getData():
             'geoLSOA': self._sourceMap,
         })
         data = sourceMap[name]()
+        return data
+
+
+    def getSummary(self, name: str):
+        """ Retrive LSOA or GP summarised data from host """
+        out = f'{self.cache}/{self.summary[name]}'
+        if os.path.exists(out):
+            logger.info(f'Data already cached - loading from {out}')
+            path = out
+            open_ = open
+        else:
+            path = f'{self.host}/{self.summary[name]}'
+            open_ = urllib.request.urlopen
+        data = pd.read_parquet(path)
+        if not os.path.exists(out):
+            data.to_parquet(out)
         return data
 
 
