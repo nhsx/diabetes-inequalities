@@ -27,11 +27,6 @@ except ModuleNotFoundError:
     logger.error('OSMNX not found - some features are unavailable.')
 
 try:
-    from pyproj import Transformer
-except ModuleNotFoundError:
-    logger.error('pyproj not found - some features are unavailable.')
-
-try:
     import geopandas
 except ModuleNotFoundError:
     logger.error('geopandas not found - some features are unavailable.')
@@ -86,12 +81,11 @@ class getData():
     @property
     def sourceURL(self):
         return ({
-            'postcodeLSOA': 'https://www.arcgis.com/sharing/rest/content/items/6a46e14a6c2441e3ab08c7b277335558/data',
-            'postcodeLatLong': 'https://api.os.uk/downloads/v1/products/CodePointOpen/downloads?area=GB&format=CSV&redirect',
+            'postcodeLSOA': 'https://www.arcgis.com/sharing/rest/content/items/5922269bd3254db7835511f33181ebd3/data',
             'imdLSOA': 'https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv',
             'populationLSOA': 'https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates/mid2020sape23dt2/sape23dt2mid2020lsoasyoaestimatesunformatted.xlsx',
             'ethnicityLSOA': 'https://www.nomisweb.co.uk/api/v01/dataset/NM_522_1.data.csv?date=latest&geography=1249902593...1249937345&rural_urban=0&c_ethnicid=0,100&measures=20100&select=GEOGRAPHY_CODE,C_ETHNICID_NAME,OBS_VALUE',
-            'areaLSOA': 'https://www.arcgis.com/sharing/rest/content/items/5a94044d113a4bd5bd895975d6612b05/data',
+            'areaLSOA': 'https://www.arcgis.com/sharing/rest/content/items/a488cb8fc9a74accb63cb52961e456ef/data',
             'gpRegistration': 'https://files.digital.nhs.uk/0E/59E17A/gp-reg-pat-prac-lsoa-male-female-July-2022.zip',
             'gpPractice': 'https://files.digital.nhs.uk/assets/ods/current/epraccur.zip',
             'gpStaff': 'https://files.digital.nhs.uk/assets/ods/current/epracmem.zip',
@@ -107,11 +101,10 @@ class getData():
     @property
     def expectedHashes(self):
         return ({
-            'postcodeLSOA': '34bf96ff8f316c6f9dada1d52dc8032e52bed7717d73b5fda4fe1d491e4cdb66',
-            'postcodeLatLong': 'fb76bf98e30cfc466b3bc9684317fe26413c1e4b0c7edbe5cea79d7c12679ddc',
+            'postcodeLSOA': 'a85ec30b13b57d549b028bc35412c3240839cd7c17333929c89af8d42b392a9f',
             'imdLSOA': 'af86bf505d9174a65cc87eb9ad97b85b2b53bf481d0e75c7cf41aa5645622aa2',
             'populationLSOA': '42cae583caf558be7aa285c94141c9d3151e3b4b66a15499e4fbf2d114d6ae36',
-            'areaLSOA': '7f97767f8142754b81a6c8a0722d3d104a89e1a4c72276eb1dc00e06ebbca3ff',
+            'areaLSOA': 'a9dfb7bdfca433a014c035eb709460505e52c7473514936299a5b161614826ab',
             'gpRegistration': '920beffa35cba1d2cdcd879603cd886c337d550961048f3c13e2ac8d6e4cf8c2',
             'gpPractice': '3584ac0f169747f6a7486983a593db825703f947d7e63af004936abd354c0e93',
             'gpStaff': 'ffacd0da1b8b5c04aa0a1d96587e561438c54d61d8616507af14c6b11bc7d29e',
@@ -242,7 +235,7 @@ class getData():
 
 
     def _sourceLSOA(self):
-        name = 'PCD_OA_LSOA_MSOA_LAD_FEB20_UK_LU.csv'
+        name = 'NSPL21_NOV_2022_UK.csv'
         url = self.sourceURL['postcodeLSOA']
         logger.info(f'Downloading LSOA lookup from {url}')
         path = self._getSourcePath('postcodeLSOA')
@@ -253,19 +246,16 @@ class getData():
             dtype = ({
                 'PCDS'    : str, # PCDS - Postcode
                 'LSOA11CD': str, # LSOA Code (Census 2011)
-                'LSOA11NM': str, # LSOA Name (Census 2011)
+                'Lat'     : float,
+                'Long'    : float
             })
-            cols = [2, 7, 10]
-            self._verifyHash('postcodeLSOA', [f'{tmp}/{name}'])
+            cols = [2, 25, 33, 34]
+            self._verifyHash('postcodeLSOA', [f'{tmp}/Data/{name}'])
             postcodeLSOA = pd.read_csv(
-                f'{tmp}/{name}', usecols=cols, names=dtype.keys(), dtype=dtype,
+                f'{tmp}/Data/{name}', usecols=cols, names=dtype.keys(), dtype=dtype,
                 skiprows=1, sep=',', encoding='latin-1')
         postcodeLSOA = postcodeLSOA.set_index('PCDS')
         esneftLSOA = self.fromHost('esneftLSOA')
-        pcdGPS = self._sourcePostcodeLatLong()
-        postcodeLSOA = (
-            pd.concat([postcodeLSOA, pcdGPS], axis=1)
-            .drop(['Eastings', 'Northings'], axis=1))
         postcodeLSOA['ESNEFT'] = postcodeLSOA['LSOA11CD'].isin(esneftLSOA)
         G = self.fromHost('esneftOSM')
         if G is not None:
@@ -281,31 +271,13 @@ class getData():
         return postcodeLSOA
 
 
-    def _sourcePostcodeLatLong(self):
-        url = self.sourceURL['postcodeLatLong']
-        logger.info(f'Downloading Postcode Lat-Long lookup from {url}')
-        with tempfile.TemporaryDirectory() as tmp:
-            urllib.request.urlretrieve(url, f'{tmp}/data.zip')
-            with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
-                zipRef.extractall(f'{tmp}/')
-            files = glob.glob(f'{tmp}/Data/CSV/*csv')
-            cols = ['PCDS', 'Eastings', 'Northings']
-            self._verifyHash('postcodeLatLong', files)
-            pcdGPS = pd.concat([
-                pd.read_csv(file, usecols=[0,2,3], names=cols, sep=',')
-                for file in files]).set_index('PCDS')
-        tf = Transformer.from_crs('epsg:27700', 'epsg:4326')
-        pcdGPS['Lat'], pcdGPS['Long'] = zip(*pcdGPS.apply(
-            lambda x: tf.transform(x['Eastings'], x['Northings']), axis=1))
-        return pcdGPS
-
-
     def _sourceIMD(self):
         name = 'imd-statistics.parquet'
         url = self.sourceURL['imdLSOA']
         logger.info(f'Downloading IMD statistics from {url}')
         dtype = ({
             'LSOA11CD'            : str,   # LSOA code (2011)
+            'LSOA11NM'            : str,   # LSOA name (2011)
             'IMD'                 : float, # Index of Multiple Deprivation (IMD) Score
             'Income'              : float, # Income Score (rate)
             'Employment'          : float, # Employment Score (rate)
@@ -329,7 +301,7 @@ class getData():
             'Population (Working)': int,   # Working age population 18-59/64: for use with Employment Deprivation Domain (excluding prisoners)
         })
         cols = ([
-            0, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31,
+            0, 1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31,
             34, 37, 40, 43, 46, 49, 52, 53, 54, 55, 56
         ])
         path = self._getSourcePath('imdLSOA')
@@ -426,12 +398,19 @@ class getData():
             urllib.request.urlretrieve(url, f'{tmp}/data.zip')
             with zipfile.ZipFile(f'{tmp}/data.zip', 'r') as zipRef:
                 zipRef.extractall(f'{tmp}/')
-            self._verifyHash('areaLSOA', [f'{tmp}/SAM_LSOA_DEC_2011_EW.xlsx'])
+            dtype = ({
+                'LSOA11CD'   : str,
+                'LandHectare': str,
+
+            })
+            cols = [0, 3]
+            file = glob.glob(f'{tmp}/*/Measurements/SAM_LSOA_*_*_EW.csv')[0]
+            self._verifyHash('areaLSOA', [file])
             areaLSOA = (
-                pd.read_excel(f'{tmp}/SAM_LSOA_DEC_2011_EW.xlsx')
-                .set_index('LSOA11CD')
-                .rename({'AREALHECT': 'LandHectare'}, axis=1)['LandHectare']
-                .to_frame()
+                pd.read_csv(
+                    file, encoding='latin-1', skiprows=1,
+                    usecols=cols, dtype=dtype, names=dtype.keys()
+                ).set_index('LSOA11CD')
             )
         areaLSOA.to_parquet(path)
         return areaLSOA
