@@ -1,9 +1,8 @@
-postcodeLSOA: https://www.arcgis.com/sharing/rest/content/items/6a46e14a6c2441e3ab08c7b277335558/data
-postcodeLatLong: https://api.os.uk/downloads/v1/products/CodePointOpen/downloads?area=GB&format=CSV&redirect
+postcodeLSOA: https://www.arcgis.com/sharing/rest/content/items/5922269bd3254db7835511f33181ebd3/data
 imdLSOA: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/845345/File_7_-_All_IoD2019_Scores__Ranks__Deciles_and_Population_Denominators_3.csv
 populationLSOA: https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates/mid2020sape23dt2/sape23dt2mid2020lsoasyoaestimatesunformatted.xlsx
 ethnicityLSOA: https://www.nomisweb.co.uk/api/v01/dataset/NM_522_1.data.csv?date=latest&geography=1249902593...1249937345&rural_urban=0&c_ethnicid=100,200,300,400,500&measures=20100
-areaLSOA: https://www.arcgis.com/sharing/rest/content/items/5a94044d113a4bd5bd895975d6612b05/data
+areaLSOA: https://www.arcgis.com/sharing/rest/content/items/a488cb8fc9a74accb63cb52961e456ef/data
 gpRegistration: https://files.digital.nhs.uk/0E/59E17A/gp-reg-pat-prac-lsoa-male-female-July-2022.zip
 gpPractice: https://files.digital.nhs.uk/assets/ods/current/epraccur.zip
 gpStaff: https://files.digital.nhs.uk/assets/ods/current/epracmem.zip
