@@ -67,7 +67,7 @@ def getGPsummary(gpRegistration, gpPractice, gpStaff,
     return summary
 
 
-def getLSOAsummary(postcodeLSOA, imdLSOA, gpRegistration, populationLSOA,
+def getLSOAsummary(imdLSOA, gpRegistration, populationLSOA,
                    ethnicityLSOA, areaLSOA, esneftLSOA, qof,
                    iod_cols: list = None, bins: int = 5,
                    quantile: bool = True, **kwargs):
