@@ -2,6 +2,8 @@
 
 [![status: experimental](https://github.com/GIScience/badges/raw/master/status/experimental.svg)](https://github.com/GIScience/badges#experimental)
 
+**Note**: _All data used in this repository is publicly available._
+
 ## Table of contents
 
   * [Installation](#installation)
