@@ -1,5 +1,6 @@
 *.data-cache
 example/
+analysis/
 development/
 *ipynb
 *png
